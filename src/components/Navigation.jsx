@@ -336,13 +336,13 @@ function Navigation({ onCollapse }) {
         .sidebar-collapse-btn {
           position: absolute;
           top: 80px;
-          right: -12px;
-          width: 24px; height: 24px;
+          right: -16px;
+          width: 32px; height: 32px;
           border-radius: 50%;
           background: #1e293b;
           border: 2px solid var(--color-bg, #f1f5f9);
           color: rgba(255,255,255,0.6);
-          font-size: 0.65rem;
+          font-size: 0.75rem;
           align-items: center;
           justify-content: center;
           cursor: pointer;

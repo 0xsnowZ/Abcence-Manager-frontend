@@ -299,26 +299,23 @@ function ProfsPage() {
   };
 
   return (
-    <div className="container py-4">
+    <div className="container-xxl px-4 py-5">
       {/* Page header */}
-      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+      <div className="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
         <div>
-          <h2 className="fw-bold mb-0 d-flex align-items-center">
-            <i className="bi bi-person-gear me-3 text-dark-navy"></i>
-            Gestion des Professeurs
-          </h2>
-          <p className="text-muted mb-0 mt-1">
-            Créez les comptes professeurs et assignez-leur leurs filières.
-          </p>
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <div className="page-icon-wrap">
+              <i className="bi bi-person-gear"></i>
+            </div>
+            <h1 className="page-title mb-0">Gestion des Professeurs</h1>
+          </div>
+          <p className="body-sm mb-0">Créez les comptes professeurs et assignez-leur leurs filières.</p>
         </div>
         <button
-          className="btn btn-dark-navy rounded-pill px-4 fw-bold shadow-sm"
-          onClick={() => {
-            setSelectedProf(false);
-            setActionError(null);
-          }}
+          className="btn-navy d-flex align-items-center gap-2"
+          onClick={() => { setSelectedProf(false); setActionError(null); }}
         >
-          <i className="bi bi-plus-lg me-2"></i>Ajouter un Professeur
+          <i className="bi bi-plus-lg"></i>Ajouter un Professeur
         </button>
       </div>
 
@@ -341,17 +338,16 @@ function ProfsPage() {
       <div className="row g-4">
         {/* ── LEFT: List ── */}
         <div className={selectedProf !== null ? "col-lg-7" : "col-12"}>
-          <div className="card border-0 shadow-sm overflow-hidden">
-            <div className="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-              <h5 className="mb-0 fw-bold d-flex align-items-center">
-                <span className="bg-dark-navy text-white p-2 rounded me-3">
-                  <i className="bi bi-people-fill"></i>
+          <div className="card-premium overflow-hidden">
+            <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+              <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+                <span className="avatar-circle avatar-sm avatar-navy">
+                  <i className="bi bi-people-fill" style={{ fontSize: "0.75rem" }}></i>
                 </span>
                 Professeurs
               </h5>
-              <span className="badge rounded-pill border text-dark px-3">
-                {filteredProfs.length} prof
-                {filteredProfs.length !== 1 ? "s" : ""}
+              <span className="badge-soft badge-soft-primary">
+                {filteredProfs.length} prof{filteredProfs.length !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -392,8 +388,8 @@ function ProfsPage() {
                 </div>
               ) : (
                 <div className="table-responsive scroll-thin">
-                <table className="table align-middle table-hover mb-0">
-                  <thead className="bg-light text-muted small text-uppercase fw-bold">
+                <table className="table align-middle mb-0 premium-table">
+                  <thead>
                     <tr>
                       <th className="ps-4 py-3">Professeur</th>
                       <th className="py-3">Filières assignées</th>

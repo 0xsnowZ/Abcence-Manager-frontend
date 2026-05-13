@@ -349,14 +349,14 @@ body {
 
 /* ─── SaisiePage attendance grid ────────────────────────────────────────────── */
 .professional-grid { border-collapse: collapse; width: 100%; }
-.professional-grid th, .professional-grid td { border: none !important; border-bottom: 1px solid var(--color-border) !important; }
-.professional-grid thead th { background: var(--color-bg); border-bottom: 2px solid var(--color-border) !important; }
+.professional-grid th, .professional-grid td { border: 1px solid #cbd5e1 !important; }
+.professional-grid thead th { background: var(--color-bg); border-bottom: 2px solid #94a3b8 !important; }
 .date-group-start,
 .professional-grid th.date-group-start,
-.professional-grid td.date-group-start { border-left: 2px solid var(--color-border-strong) !important; }
+.professional-grid td.date-group-start { border-left: 3px solid #475569 !important; }
 .border-end-heavy,
 .professional-grid th.border-end-heavy,
-.professional-grid td.border-end-heavy { border-right: 2px solid var(--color-border-strong) !important; }
+.professional-grid td.border-end-heavy { border-right: 3px solid #475569 !important; }
 .sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
 .professional-grid .cell-slot { cursor: pointer; transition: background 0.15s; position: relative; }
 .professional-grid .cell-slot:hover { background: #f1f5ff; }
