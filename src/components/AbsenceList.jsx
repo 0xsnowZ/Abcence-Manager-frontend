@@ -39,7 +39,7 @@ function AbsenceList({
     const s = stagiaires.find((st) => st.id === id);
     if (!s) return "-";
     const prog = (s.programmes || [])[0];
-    return prog?.filiere?.code || prog?.code_diplome || "-";
+    return prog?.code_diplome || s.filiere || s.programme_code || "-";
   };
 
   const filteredAbsences = absences
