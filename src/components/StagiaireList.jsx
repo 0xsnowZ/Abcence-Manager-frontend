@@ -2,13 +2,17 @@ import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { deleteStagiaire } from "../store/stagiaireSlice.jsx";
 import { deleteAttendance } from "../store/absenceSlice.jsx";
+import { useToast } from "./ToastProvider.jsx";
+import ConfirmModal from "./ConfirmModal.jsx";
 
 function StagiaireList({ onEdit, filiere, onBack }) {
   const dispatch = useDispatch();
+  const showToast = useToast();
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const absences = useSelector((state) => state.absences.items);
   const user = useSelector((state) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
+  const [confirm, setConfirm] = useState({ open: false, id: null, name: "", absenceCount: 0 });
 
   const getAbsenceCount = (stagiaireId) =>
     absences.filter((a) => (a.stagiaire_id || a.idstag) === stagiaireId).length;
@@ -39,17 +43,22 @@ function StagiaireList({ onEdit, filiere, onBack }) {
   const currentStagiaires = filteredStagiaires.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredStagiaires.length / itemsPerPage);
 
-  const handleDelete = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce stagiaire ?")) {
-      const related = absences.filter((a) => (a.stagiaire_id || a.idstag) === id);
-      for (const a of related) {
-        await dispatch(deleteAttendance(a.id));
-      }
-      dispatch(deleteStagiaire(id));
+  const handleDelete = async () => {
+    const related = absences.filter((a) => (a.stagiaire_id || a.idstag) === confirm.id);
+    for (const a of related) {
+      await dispatch(deleteAttendance(a.id));
+    }
+    const result = await dispatch(deleteStagiaire(confirm.id));
+    setConfirm({ open: false, id: null, name: "", absenceCount: 0 });
+    if (result.error) {
+      showToast("Erreur lors de la suppression.", "error");
+    } else {
+      showToast("Stagiaire supprimé avec succès.", "success");
     }
   };
 
   return (
+    <>
     <div className="card-premium overflow-hidden anim-fade-in">
       <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div className="d-flex align-items-center flex-wrap gap-2">
@@ -157,7 +166,12 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                         {user?.role === "admin" && (
                           <button
                             className="btn-action-round btn-delete shadow-sm"
-                            onClick={() => handleDelete(stagiaire.id)}
+                            onClick={() => setConfirm({
+                              open: true,
+                              id: stagiaire.id,
+                              name: getDisplayName(stagiaire),
+                              absenceCount: getAbsenceCount(stagiaire.id),
+                            })}
                             title="Supprimer"
                           >
                             <i className="bi bi-trash3-fill"></i>
@@ -215,6 +229,17 @@ function StagiaireList({ onEdit, filiere, onBack }) {
         )}
       </div>
     </div>
+
+    <ConfirmModal
+      open={confirm.open}
+      title="Supprimer le stagiaire"
+      message={`Supprimer ${confirm.name} et ses ${confirm.absenceCount} absence(s) liée(s) ? Cette action est irréversible.`}
+      confirmLabel="Supprimer"
+      variant="danger"
+      onConfirm={handleDelete}
+      onCancel={() => setConfirm({ open: false, id: null, name: "", absenceCount: 0 })}
+    />
+    </>
   );
 }
 

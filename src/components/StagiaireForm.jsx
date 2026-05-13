@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createStagiaire, updateStagiaire } from "../store/stagiaireSlice.jsx";
+import { useToast } from "./ToastProvider.jsx";
 
 const NEW_FILIERE_KEY = "__new__";
 

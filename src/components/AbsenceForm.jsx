@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
+import { useToast } from "./ToastProvider.jsx";
 
 function AbsenceForm({ absence, onCancel, onSave }) {
   const dispatch = useDispatch();
+  const showToast = useToast();
   const stagiaires = useSelector((state) => state.stagiaires.items);
 
   const [formData, setFormData] = useState({
@@ -54,9 +56,11 @@ function AbsenceForm({ absence, onCancel, onSave }) {
           })
         ).unwrap();
         await dispatch(fetchAttendances());
+        showToast("Absence mise à jour avec succès.", "success");
       }
       onSave();
     } catch (err) {
+      showToast(String(err) || "Erreur lors de la mise à jour.", "error");
       setErrors({ submit: String(err) });
     } finally {
       setSaving(false);

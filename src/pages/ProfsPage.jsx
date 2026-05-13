@@ -7,6 +7,8 @@ import {
   deleteProf,
 } from "../store/profSlice.jsx";
 import { fetchProgrammes } from "../store/programmeSlice.jsx";
+import { useToast } from "../components/ToastProvider.jsx";
+import ConfirmModal from "../components/ConfirmModal.jsx";
 
 // ── ProfForm ────────────────────────────────────────────────────────────────
 function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
@@ -252,9 +254,11 @@ function ProfsPage() {
     dispatch(fetchProgrammes());
   }, [dispatch]);
 
+  const showToast = useToast();
   const [selectedProf, setSelectedProf] = useState(null); // null=hidden, false=new, obj=edit
   const [searchTerm, setSearchTerm] = useState("");
   const [actionError, setActionError] = useState(null);
+  const [confirm, setConfirm] = useState({ open: false, id: null, name: "" });
 
   const filteredProfs = useMemo(
     () =>
@@ -276,22 +280,21 @@ function ProfsPage() {
     }
     if (result.error) {
       setActionError(result.payload || "Une erreur est survenue.");
+      showToast(result.payload || "Une erreur est survenue.", "error");
     } else {
+      showToast(payload.id ? "Professeur mis à jour avec succès." : "Professeur créé avec succès.", "success");
       setSelectedProf(null);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (
-      window.confirm(
-        "Supprimer ce professeur ? Il ne pourra plus se connecter.",
-      )
-    ) {
-      setActionError(null);
-      const result = await dispatch(deleteProf(id));
-      if (result.error) {
-        setActionError(result.payload || "Erreur lors de la suppression.");
-      }
+  const handleDelete = async () => {
+    setActionError(null);
+    const result = await dispatch(deleteProf(confirm.id));
+    setConfirm({ open: false, id: null, name: "" });
+    if (result.error) {
+      showToast(result.payload || "Erreur lors de la suppression.", "error");
+    } else {
+      showToast("Professeur supprimé avec succès.", "success");
     }
   };
 
@@ -456,7 +459,7 @@ function ProfsPage() {
                               <button
                                 className="btn-action-round btn-delete shadow-sm"
                                 title="Supprimer"
-                                onClick={() => handleDelete(p.id)}
+                                onClick={() => setConfirm({ open: true, id: p.id, name: p.name || p.email || "ce professeur" })}
                               >
                                 <i className="bi bi-trash3-fill"></i>
                               </button>
@@ -485,6 +488,16 @@ function ProfsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={confirm.open}
+        title="Supprimer le professeur"
+        message={`Supprimer ${confirm.name} ? Il ne pourra plus se connecter.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setConfirm({ open: false, id: null, name: "" })}
+      />
 
       <style>{`
         .bg-dark-navy { background-color: #0A121A; }

@@ -76,6 +76,8 @@ export const normalizeStagiaire = (s) => ({
   sexe: s.sexe || "m",
   filiere: s.filiere || s.programme_code || "",
   programmes: s.programmes || [],
+  cin: s.cin || "",
+  telephone: s.telephone || s.tel || "",
 });
 
 // ─── Slice ─────────────────────────────────────────────────────────────────────

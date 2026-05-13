@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { deleteAttendance } from "../store/absenceSlice.jsx";
-import { fetchAttendances } from "../store/absenceSlice.jsx";
+import { deleteAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
+import { useToast } from "./ToastProvider.jsx";
+import ConfirmModal from "./ConfirmModal.jsx";
 
 function AbsenceList({
   onEdit,
@@ -11,10 +12,12 @@ function AbsenceList({
   filiereFilter = null,
 }) {
   const dispatch = useDispatch();
+  const showToast = useToast();
   const rawAbsences = useSelector((state) => state.absences.items);
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const user = useSelector((state) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
+  const [confirm, setConfirm] = useState({ open: false, id: null });
 
   // Normalize: backend attendance has stagiaire_id; frontend used idstag
   const absences = rawAbsences.map((a) => ({
@@ -61,8 +64,13 @@ function AbsenceList({
       }
 
       if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const s = stagiaires.find((st) => st.id === absence.idstag);
         const name = getStagiaireName(absence).toLowerCase();
-        return name.includes(searchTerm.toLowerCase());
+        const matricule = String(s?.matricule || "").toLowerCase();
+        const cin = String(s?.cin || "").toLowerCase();
+        const tel = String(s?.telephone || "").toLowerCase();
+        return name.includes(q) || matricule.includes(q) || cin.includes(q) || tel.includes(q);
       }
 
       return true;
@@ -83,9 +91,14 @@ function AbsenceList({
   const currentAbsences = filteredAbsences.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredAbsences.length / itemsPerPage);
 
-  const handleDelete = (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette absence ?")) {
-      dispatch(deleteAttendance(id)).then(() => dispatch(fetchAttendances()));
+  const handleDelete = async () => {
+    const result = await dispatch(deleteAttendance(confirm.id));
+    setConfirm({ open: false, id: null });
+    if (result.error) {
+      showToast("Erreur lors de la suppression.", "error");
+    } else {
+      dispatch(fetchAttendances());
+      showToast("Absence supprimée avec succès.", "success");
     }
   };
 
@@ -95,6 +108,7 @@ function AbsenceList({
   };
 
   return (
+    <>
     <div className="card-premium overflow-hidden">
       <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
         <h5 className="section-title mb-0 d-flex align-items-center gap-3">
@@ -116,7 +130,7 @@ function AbsenceList({
             <input
               type="text"
               className="form-control border-0 bg-white"
-              placeholder="Rechercher par nom de stagiaire..."
+              placeholder="Rechercher par nom, matricule, CIN ou téléphone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{ boxShadow: "none" }}
@@ -199,7 +213,7 @@ function AbsenceList({
                         {user?.role === "admin" && (
                           <button
                             className="btn-action-round btn-delete shadow-sm"
-                            onClick={() => handleDelete(absence.id)}
+                            onClick={() => setConfirm({ open: true, id: absence.id })}
                             title="Supprimer"
                           >
                             <i className="bi bi-trash3-fill"></i>
@@ -268,6 +282,17 @@ function AbsenceList({
         )}
       </div>
     </div>
+
+    <ConfirmModal
+      open={confirm.open}
+      title="Supprimer l'absence"
+      message="Êtes-vous sûr de vouloir supprimer définitivement cette absence ?"
+      confirmLabel="Supprimer"
+      variant="danger"
+      onConfirm={handleDelete}
+      onCancel={() => setConfirm({ open: false, id: null })}
+    />
+    </>
   );
 }
 
