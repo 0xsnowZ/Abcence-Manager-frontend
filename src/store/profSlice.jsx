@@ -82,6 +82,7 @@ const profSlice = createSlice({
 
     // createProf
     builder
+      .addCase(createProf.pending, (state) => { state.error = null; })
       .addCase(createProf.fulfilled, (state, action) => {
         state.items.push(action.payload);
       })
@@ -91,6 +92,7 @@ const profSlice = createSlice({
 
     // updateProf
     builder
+      .addCase(updateProf.pending, (state) => { state.error = null; })
       .addCase(updateProf.fulfilled, (state, action) => {
         const idx = state.items.findIndex((p) => p.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
@@ -101,6 +103,7 @@ const profSlice = createSlice({
 
     // deleteProf
     builder
+      .addCase(deleteProf.pending, (state) => { state.error = null; })
       .addCase(deleteProf.fulfilled, (state, action) => {
         state.items = state.items.filter((p) => p.id !== action.payload);
       })
@@ -110,4 +113,4 @@ const profSlice = createSlice({
   },
 });
 
-export default profSlice.reducer;
+export default profSlice;

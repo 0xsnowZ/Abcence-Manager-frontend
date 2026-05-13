@@ -95,15 +95,15 @@ function AbsenceList({
   };
 
   return (
-    <div className="card border-0 shadow-sm overflow-hidden">
-      <div className="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
-        <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-          <span className="bg-dark-navy text-white p-2 rounded me-3 d-flex shadow-sm">
-            <i className="bi bi-calendar2-x-fill"></i>
+    <div className="card-premium overflow-hidden">
+      <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+        <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+          <span className="avatar-circle avatar-sm avatar-navy">
+            <i className="bi bi-calendar2-x-fill" style={{ fontSize: "0.75rem" }}></i>
           </span>
           Historique des Absences
         </h5>
-        <span className="badge rounded-pill bg-soft-dark-navy text-dark-navy px-3 py-2 border shadow-none">
+        <span className="badge-soft badge-soft-primary">
           {filteredAbsences.length} Enregistrements
         </span>
       </div>
@@ -124,13 +124,13 @@ function AbsenceList({
           </div>
         </div>
 
-        <div className="table-responsive">
-          <table className="table align-middle table-hover custom-table">
-            <thead className="bg-light text-muted small text-uppercase fw-bold">
+        <div className="table-responsive scroll-thin">
+          <table className="table align-middle mb-0 premium-table">
+            <thead>
               <tr>
                 <th className="ps-4 py-3">ID</th>
                 <th className="py-3">Stagiaire</th>
-                <th className="py-3">Filière</th>
+                <th className="py-3">Classe</th>
                 <th className="py-3">Date</th>
                 <th className="py-3 text-center">Heures</th>
                 <th className="py-3 text-center">Statut</th>
@@ -148,11 +148,11 @@ function AbsenceList({
               ) : (
                 currentAbsences.map((absence) => (
                   <tr key={absence.id} className="transition-all">
-                    <td className="ps-4 text-muted small">#{absence.id}</td>
+                    <td className="ps-4 body-sm">#{absence.id}</td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <div className="avatar-circle me-3 bg-light text-dark-navy shadow-sm border">
-                          <i className="bi bi-person-fill"></i>
+                        <div className="avatar-circle avatar-md avatar-accent me-3">
+                          <i className="bi bi-person-fill" style={{ fontSize: "0.85rem" }}></i>
                         </div>
                         <span className="fw-bold text-dark">
                           {getStagiaireName(absence)}
@@ -165,7 +165,7 @@ function AbsenceList({
                       </span>
                     </td>
                     <td>
-                      <span className="text-muted small fw-medium">
+                      <span className="body-sm fw-medium">
                         <i className="bi bi-calendar3 me-2 text-dark-navy opacity-50"></i>
                         {formatDate(absence.date)}
                       </span>
@@ -178,12 +178,12 @@ function AbsenceList({
                     </td>
                     <td className="text-center">
                       {absence.justifie ? (
-                        <span className="badge rounded-pill bg-soft-success text-success px-3 py-1 border border-success">
-                          <i className="bi bi-check-circle-fill me-1"></i>Justifiée
+                        <span className="badge-soft badge-soft-success">
+                          <i className="bi bi-check-circle-fill"></i>Justifiée
                         </span>
                       ) : (
-                        <span className="badge rounded-pill bg-soft-danger text-danger px-3 py-1 border border-danger">
-                          <i className="bi bi-x-circle-fill me-1"></i>Non justifiée
+                        <span className="badge-soft badge-soft-danger">
+                          <i className="bi bi-x-circle-fill"></i>Non justifiée
                         </span>
                       )}
                     </td>
@@ -216,7 +216,7 @@ function AbsenceList({
 
         {totalPages > 1 && (
           <div className="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
-            <span className="text-muted small">
+            <span className="body-sm">
               Affichage {indexOfFirstItem + 1}-
               {Math.min(indexOfLastItem, filteredAbsences.length)} sur {filteredAbsences.length}
             </span>
@@ -267,22 +267,6 @@ function AbsenceList({
           </div>
         )}
       </div>
-      <style>{`
-        .bg-soft-danger { background-color: #fceaea; }
-        .bg-soft-success { background-color: #e6f9ed; }
-        .bg-soft-dark-navy { background-color: #e7f1ff; }
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .avatar-circle { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
-        .custom-table tbody tr { transition: all 0.2s; border-color: #f8f9fa; }
-        .custom-table tbody tr:hover { background-color: #fcfcfc; }
-        .btn-action-round { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
-        .btn-edit { background-color: #fff; color: #0d6efd; border: 1px solid #e7f1ff; }
-        .btn-edit:hover { background-color: #0d6efd; color: #fff; transform: scale(1.1); }
-        .btn-delete { background-color: #fff; color: #dc3545; border: 1px solid #fceaea; }
-        .btn-delete:hover { background-color: #dc3545; color: #fff; transform: scale(1.1); }
-        .transition-all { transition: all 0.2s ease-in-out; }
-      `}</style>
     </div>
   );
 }

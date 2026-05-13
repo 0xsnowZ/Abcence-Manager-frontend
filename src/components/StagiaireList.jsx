@@ -50,23 +50,20 @@ function StagiaireList({ onEdit, filiere, onBack }) {
   };
 
   return (
-    <div className="card border-0 shadow-sm overflow-hidden anim-fade-in">
-      <div className="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+    <div className="card-premium overflow-hidden anim-fade-in">
+      <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
         <div className="d-flex align-items-center">
-          <button
-            className="btn btn-sm btn-outline-dark-navy rounded-pill me-3 px-3 d-flex align-items-center"
-            onClick={onBack}
-          >
-            <i className="bi bi-arrow-left me-1"></i>Retour
+          <button className="btn-navy-outline d-inline-flex align-items-center gap-1 me-3 py-1 px-3" style={{ fontSize: "0.82rem" }} onClick={onBack}>
+            <i className="bi bi-arrow-left"></i>Retour
           </button>
-          <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-            <span className="bg-dark-navy text-white p-2 rounded me-3 d-flex shadow-sm">
-              <i className="bi bi-mortarboard-fill"></i>
+          <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+            <span className="avatar-circle avatar-md avatar-navy">
+              <i className="bi bi-mortarboard-fill" style={{ fontSize: "0.85rem" }}></i>
             </span>
-            Stagiaires - {filiere}
+            Stagiaires — {filiere}
           </h5>
         </div>
-        <span className="badge rounded-pill bg-soft-dark-navy text-dark-navy px-3 py-2 border shadow-none">
+        <span className="badge-soft badge-soft-primary">
           {filteredStagiaires.length} Inscrits
         </span>
       </div>
@@ -87,9 +84,9 @@ function StagiaireList({ onEdit, filiere, onBack }) {
           </div>
         </div>
 
-        <div className="table-responsive">
-          <table className="table align-middle table-hover custom-table">
-            <thead className="bg-light text-muted small text-uppercase fw-bold">
+        <div className="table-responsive scroll-thin">
+          <table className="table align-middle mb-0 premium-table">
+            <thead>
               <tr>
                 <th className="ps-4 py-3">ID</th>
                 <th className="py-3">Nom Complet</th>
@@ -109,14 +106,14 @@ function StagiaireList({ onEdit, filiere, onBack }) {
               ) : (
                 currentStagiaires.map((stagiaire) => (
                   <tr key={stagiaire.id} className="transition-all">
-                    <td className="ps-4 text-muted small">#{stagiaire.id}</td>
+                    <td className="ps-4 body-sm">#{stagiaire.id}</td>
                     <td>
                       <div className="d-flex align-items-center">
                         <div
-                          className={`avatar-circle me-3 shadow-sm ${
+                          className={`avatar-circle avatar-md me-3 ${
                             ["f", "F"].includes(stagiaire.sexe)
                               ? "bg-soft-danger text-danger"
-                              : "bg-soft-dark-navy text-dark-navy"
+                              : "avatar-accent"
                           }`}
                         >
                           {getDisplayName(stagiaire).charAt(0).toUpperCase()}
@@ -177,7 +174,7 @@ function StagiaireList({ onEdit, filiere, onBack }) {
 
         {totalPages > 1 && (
           <div className="d-flex justify-content-between align-items-center mt-4">
-            <span className="text-muted small">
+            <span className="body-sm">
               Affichage {indexOfFirstItem + 1}-
               {Math.min(indexOfLastItem, filteredStagiaires.length)} sur{" "}
               {filteredStagiaires.length}
@@ -217,27 +214,6 @@ function StagiaireList({ onEdit, filiere, onBack }) {
           </div>
         )}
       </div>
-      <style>{`
-        .anim-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .bg-soft-danger { background-color: #fceaea; }
-        .bg-soft-warning { background-color: #fff8e6; }
-        .bg-soft-success { background-color: #e6f9ed; }
-        .bg-soft-dark-navy { background-color: #e7f1ff; }
-        .avatar-circle { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
-        .custom-table tbody tr { transition: all 0.2s; border-color: #f8f9fa; }
-        .custom-table tbody tr:hover { background-color: #fcfcfc; }
-        .btn-action-round { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
-        .btn-edit { background-color: #fff; color: #0d6efd; border: 1px solid #e7f1ff; }
-        .btn-edit:hover { background-color: #0d6efd; color: #fff; transform: scale(1.1); }
-        .btn-delete { background-color: #fff; color: #dc3545; border: 1px solid #fceaea; }
-        .btn-delete:hover { background-color: #dc3545; color: #fff; transform: scale(1.1); }
-        .btn-outline-dark-navy { color: #0A121A; border-color: #0A121A; }
-        .btn-outline-dark-navy:hover { background-color: #0A121A; color: #fff; }
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .transition-all { transition: all 0.2s ease-in-out; }
-      `}</style>
     </div>
   );
 }

@@ -109,10 +109,10 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
   };
 
   return (
-    <div className="card border-0 shadow-lg overflow-hidden">
-      <div className="card-header bg-dark-navy text-white py-3">
-        <h5 className="mb-0 fw-bold small text-uppercase tracking-wider">
-          <i className="bi bi-person-plus-fill me-2"></i>
+    <div className="card-premium overflow-hidden">
+      <div className="card-header py-3 px-4" style={{ background: "var(--color-primary)" }}>
+        <h5 className="mb-0 label-caps text-white d-flex align-items-center gap-2">
+          <i className="bi bi-person-plus-fill"></i>
           {stagiaire ? "Modifier le Profil" : "Nouveau Stagiaire"}
         </h5>
       </div>
@@ -123,7 +123,7 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
         <form onSubmit={handleSubmit}>
           {/* Matricule */}
           <div className="mb-3">
-            <label className="form-label fw-bold small text-muted text-uppercase">Matricule</label>
+            <label className="form-label label-caps">Matricule</label>
             <div className="input-group">
               <span className="input-group-text bg-light border-end-0">
                 <i className="bi bi-hash text-dark-navy"></i>
@@ -142,7 +142,7 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
           {/* Prénom */}
           <div className="mb-3">
-            <label className="form-label fw-bold small text-muted text-uppercase">Prénom</label>
+            <label className="form-label label-caps">Prénom</label>
             <div className="input-group">
               <span className="input-group-text bg-light border-end-0">
                 <i className="bi bi-person text-dark-navy"></i>
@@ -161,7 +161,7 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
           {/* Nom */}
           <div className="mb-4">
-            <label className="form-label fw-bold small text-muted text-uppercase">Nom de famille</label>
+            <label className="form-label label-caps">Nom de famille</label>
             <div className="input-group">
               <span className="input-group-text bg-light border-end-0">
                 <i className="bi bi-person text-dark-navy"></i>
@@ -180,7 +180,7 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
           {/* Filière */}
           <div className="mb-4">
-            <label className="form-label fw-bold small text-muted text-uppercase">Filière / Classe</label>
+            <label className="form-label label-caps">Filière / Classe</label>
             <div className="input-group">
               <span className="input-group-text bg-light border-end-0">
                 <i className="bi bi-mortarboard text-dark-navy"></i>
@@ -219,7 +219,7 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
           {/* Genre */}
           <div className="mb-4">
-            <label className="form-label fw-bold small text-muted text-uppercase d-block mb-3">Genre</label>
+            <label className="form-label label-caps d-block mb-3">Genre</label>
             <div className="d-flex gap-4">
               <div className="form-check custom-radio">
                 <input
@@ -255,19 +255,19 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
           <div className="d-flex gap-3 pt-3">
             <button
               type="submit"
-              className="btn btn-dark-navy rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center flex-grow-1 justify-content-center"
+              className="btn-navy flex-grow-1 justify-content-center py-2"
               disabled={saving}
             >
               {saving ? (
                 <span className="spinner-border spinner-border-sm me-2" />
               ) : (
-                <i className="bi bi-check-lg me-2 fs-5"></i>
+                <i className="bi bi-check-lg fs-5"></i>
               )}
               {stagiaire ? "Mettre à jour" : "Enregistrer"}
             </button>
             <button
               type="button"
-              className="btn btn-outline-secondary rounded-pill px-4 py-2 fw-bold d-flex align-items-center"
+              className="btn-navy-outline py-2 px-4"
               onClick={onCancel}
             >
               Annuler
@@ -275,14 +275,6 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
           </div>
         </form>
       </div>
-      <style>{`
-        .tracking-wider { letter-spacing: 0.05em; }
-        .custom-radio .form-check-input:checked { background-color: #0A121A; border-color: #0A121A; }
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; }
-        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
-      `}</style>
     </div>
   );
 }

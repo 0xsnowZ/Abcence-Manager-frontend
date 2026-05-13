@@ -9,18 +9,26 @@ function CalendarHistory() {
   const { user } = useSelector((state) => state.auth);
 
   const isProf = user?.role === 'prof';
-  const profFilieres = isProf && user?.filieres?.length > 0 ? user.filieres : [];
+  const profFilieres = useMemo(() =>
+    isProf && user?.programmes?.length > 0
+      ? user.programmes.map((p) => p.code_diplome)
+      : [],
+    [isProf, user]
+  );
+
+  const getStagiaireClasse = (s) =>
+    (s.programmes || [])[0]?.code_diplome || s.filiere || s.programme_code || "";
 
   const [dateRange, setDateRange] = useState(() => {
     const end = new Date();
     const start = new Date();
-    start.setDate(end.getDate() - 7); // Default to last 7 days
+    start.setDate(end.getDate() - 7);
     return [start, end];
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
   const filieres = useMemo(() => {
-    const all = [...new Set(stagiaires.map((s) => s.filiere))].sort();
+    const all = [...new Set(stagiaires.map(getStagiaireClasse).filter(Boolean))].sort();
     if (profFilieres.length > 0) {
       return all.filter(f => profFilieres.includes(f));
     }
@@ -31,7 +39,7 @@ function CalendarHistory() {
 
   const filteredStagiaires = useMemo(() => {
     if (!filiere) return [];
-    return stagiaires.filter((s) => s.filiere === filiere);
+    return stagiaires.filter((s) => getStagiaireClasse(s) === filiere);
   }, [stagiaires, filiere]);
 
   const getDatesInRange = (startDate, endDate) => {
@@ -61,14 +69,15 @@ function CalendarHistory() {
     return localDate.toISOString().split("T")[0];
   };
 
-  // Map to easily look up absences by stagiaire and date
+  // Map: `${stagiaireId}_${date}` → absence[]
   const absenceMap = useMemo(() => {
     const map = {};
     absences.forEach((a) => {
-      const key = `${a.idstag}_${a.date}`;
-      if (!map[key]) {
-        map[key] = [];
-      }
+      const sid = a.idstag ?? a.stagiaire_id;
+      const date = a.date ?? a.session?.date_session ?? "";
+      if (!sid || !date) return;
+      const key = `${sid}_${date}`;
+      if (!map[key]) map[key] = [];
       map[key].push(a);
     });
     return map;
@@ -76,22 +85,19 @@ function CalendarHistory() {
 
   return (
     <>
-      <div className="card border-0 shadow-sm mb-5">
-        <div className="card-header bg-white py-4 border-bottom-0 d-flex justify-content-between align-items-center">
-          <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-            <div
-              className="bg-dark-navy text-white rounded-circle me-3 d-flex align-items-center justify-content-center"
-              style={{ width: "48px", height: "48px", flexShrink: 0 }}
-            >
-              <i className="bi bi-calendar3-range-fill"></i>
-            </div>
+      <div className="card-premium mb-5">
+        <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+          <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+            <span className="avatar-circle avatar-md avatar-navy">
+              <i className="bi bi-calendar3-range-fill" style={{ fontSize: "0.85rem" }}></i>
+            </span>
             Historique du Calendrier
           </h5>
         </div>
-        <div className="card-body bg-light border-bottom">
+        <div className="card-body border-bottom" style={{ background: "var(--color-bg)" }}>
           <div className="row g-4 align-items-end">
             <div className="col-lg-5">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Classe / Filière
               </label>
               <div className="input-group input-group-lg">
@@ -113,7 +119,7 @@ function CalendarHistory() {
               </div>
             </div>
             <div className="col-lg-7">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Période d'appel
               </label>
               <div className="position-relative">
@@ -170,33 +176,27 @@ function CalendarHistory() {
 
         {dateColumns.length > 0 && filiere ? (
           filteredStagiaires.length > 0 ? (
-            <div className="table-responsive">
-              <table className="table table-bordered table-sm mb-0 align-middle professional-grid">
-                <thead>
-                  <tr className="bg-white">
+            <div className="table-responsive scroll-thin" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+              <table className="table table-sm mb-0 align-middle cal-grid">
+                <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 var(--color-border), 0 2px 0 var(--color-border-strong)" }}>
+                  <tr>
                     <th
-                      className="ps-4 border-bottom-0 pb-3 pt-3 sticky-col"
-                      style={{ width: "240px", zIndex: 10 }}
+                      className="ps-4 cal-sticky-col"
+                      style={{ width: "220px", zIndex: 10 }}
                     >
                       NOM DU STAGIAIRE
                     </th>
                     {dateColumns.map((d, index) => (
                       <th
                         key={index}
-                        className="text-center py-2 border-bottom-0"
-                        style={{ minWidth: "60px", backgroundColor: "#f8f9fa" }}
+                        className="text-center py-2"
+                        style={{ minWidth: "56px" }}
                       >
-                        <div
-                          className="text-uppercase text-muted lh-1 mb-1"
-                          style={{ fontSize: "0.6rem" }}
-                        >
+                        <div className="label-caps lh-1 mb-1">
                           {d.toLocaleDateString("fr-FR", { weekday: "short" })}
                         </div>
-                        <div className="fw-bold text-dark">
-                          {d.toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                          })}
+                        <div className="fw-600 text-dark" style={{ fontSize: "0.8rem" }}>
+                          {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
                         </div>
                       </th>
                     ))}
@@ -204,9 +204,9 @@ function CalendarHistory() {
                 </thead>
                 <tbody>
                   {filteredStagiaires.map((stagiaire) => (
-                    <tr key={stagiaire.id} className="hover-row">
-                      <td className="ps-4 fw-bold text-dark border-end-heavy sticky-col bg-white">
-                        {stagiaire.nom}
+                    <tr key={stagiaire.id} className="cal-hover-row">
+                      <td className="ps-4 fw-600 cal-sticky-col cal-name-col">
+                        {stagiaire.prenom ? `${stagiaire.prenom} ${stagiaire.nom}` : stagiaire.nomComplet || stagiaire.nom}
                       </td>
                       {dateColumns.map((d, dIdx) => {
                         const dateStr = formatStoreDate(d);
@@ -218,7 +218,7 @@ function CalendarHistory() {
                         );
                         const allJustified =
                           dayAbsences.length > 0 &&
-                          dayAbsences.every((a) => a.justifie);
+                          dayAbsences.every((a) => a.justifie ?? !!a.justification);
 
                         let cellClass = "";
                         let cellContent = null;
@@ -250,8 +250,8 @@ function CalendarHistory() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-5 bg-white">
-              <h5 className="text-muted">
+            <div className="text-center py-5">
+              <h5 className="body-sm">
                 Aucun stagiaire trouvé pour cette filière
               </h5>
             </div>
@@ -266,29 +266,6 @@ function CalendarHistory() {
         )}
       </div>
 
-      <style>{`
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .bg-soft-primary { background-color: #f0f7ff; }
-        .bg-soft-danger { background-color: #fff1f1; }
-        .bg-soft-success { background-color: #f0fff4; }
-        .bg-soft-warning { background-color: #fffbf0; }
-        .tracking-wider { letter-spacing: 0.05em; }
-        .hover-lift { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .hover-lift:hover { transform: translateY(-5px); }
-        .custom-table tbody tr { border-color: #f8f9fa; }
-        .custom-table tbody tr:last-child { border-bottom: none; }
-        .card { border: 1px solid rgba(0,0,0,0.05) !important; }
-        .professional-grid { border-collapse: collapse; width: 100%; border: 1px solid #ced4da; }
-        .professional-grid th, .professional-grid td { border: 1px solid #adb5bd !important; }
-        .border-end-heavy { border-right: 3px solid #495057 !important; }
-        .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
-        .cell-slot { position: relative; vertical-align: middle; }
-        .is-absent { background-color: #fceaea !important; color: #dc3545; font-weight: bold; }
-        .is-justified { background-color: #e6f9ed !important; color: #198754; font-weight: bold; }
-        .hover-row:hover .sticky-col { background-color: #f8f9fa !important; }
-        .hover-row:hover td { background-color: rgba(0,0,0,0.01); }
-      `}</style>
     </>
   );
 }

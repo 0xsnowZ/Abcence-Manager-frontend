@@ -88,32 +88,32 @@ function AbsenceForm({ absence, onCancel, onSave }) {
 
   return (
     <div
-      className="card border-0 shadow-lg overflow-hidden position-relative"
+      className="card-premium overflow-hidden position-relative"
       style={{ zIndex: 10 }}
     >
-      <div className="bg-dark-navy" style={{ height: "4px" }}></div>
-      <div className="card-header bg-white py-4 border-bottom-0">
-        <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-          <span className="bg-soft-dark-navy text-dark-navy p-2 rounded me-3 d-flex">
-            <i className="bi bi-calendar-plus"></i>
+      <div style={{ height: "4px", background: "var(--color-accent)" }}></div>
+      <div className="card-header py-4 px-4">
+        <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+          <span className="avatar-circle avatar-sm" style={{ background: "var(--color-primary-light)", color: "var(--color-primary)" }}>
+            <i className="bi bi-calendar-plus" style={{ fontSize: "0.75rem" }}></i>
           </span>
           {absence ? "Modifier l'Absence" : "Saisir une Absence"}
         </h5>
-        <p className="text-muted small mt-2 mb-0 ms-5 ps-1">
+        <p className="body-sm mt-2 mb-0 ms-5 ps-1">
           {absence
             ? "Modifiez le statut de justification de cette absence."
             : "Remplissez les informations ci-dessous."}
         </p>
       </div>
 
-      <div className="card-body p-4 bg-light border-top border-bottom">
+      <div className="card-body p-4 border-top border-bottom" style={{ background: "var(--color-bg)" }}>
         {errors.submit && (
           <div className="alert alert-danger py-2 small mb-3">{errors.submit}</div>
         )}
         <form onSubmit={handleSubmit}>
           {/* Stagiaire selector (read-only when editing) */}
           <div className="mb-4">
-            <label className="form-label fw-bold small text-muted text-uppercase">
+            <label className="form-label label-caps">
               Cible Stagiaire
             </label>
             <div className="input-group input-group-lg shadow-sm">
@@ -146,7 +146,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
           {/* Date (read-only when editing) */}
           <div className="row g-4 mb-4">
             <div className="col-md-7">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Date Relevée
               </label>
               <div className="input-group input-group-lg shadow-sm">
@@ -167,7 +167,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
               )}
             </div>
             <div className="col-md-5">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Heures Manquées
               </label>
               <div className="input-group input-group-lg shadow-sm">
@@ -190,7 +190,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
           </div>
 
           {/* Justification toggle */}
-          <div className="mb-4 bg-white p-3 rounded border shadow-sm d-inline-block w-100">
+          <div className="mb-4 p-3 rounded-3 border d-inline-block w-100" style={{ background: "var(--color-surface)" }}>
             <div className="form-check form-switch custom-switch d-flex align-items-center mb-0">
               <input
                 className="form-check-input ms-0 me-3 mt-0"
@@ -244,19 +244,20 @@ function AbsenceForm({ absence, onCancel, onSave }) {
           <div className="d-flex gap-3 pt-3 border-top mt-2">
             <button
               type="submit"
-              className="btn btn-dark-navy rounded-pill px-5 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center flex-grow-1 fs-5"
+              className="btn-navy flex-grow-1 justify-content-center py-2"
+              style={{ fontSize: "0.95rem" }}
               disabled={saving}
             >
               {saving ? (
                 <span className="spinner-border spinner-border-sm me-2" />
               ) : (
-                <i className="bi bi-check2-all me-2"></i>
+                <i className="bi bi-check2-all"></i>
               )}
               {absence ? "Enregistrer les modifications" : "Valider l'Absence"}
             </button>
             <button
               type="button"
-              className="btn btn-light border rounded-pill px-4 py-3 fw-bold d-flex align-items-center text-secondary"
+              className="btn-navy-outline py-2 px-4"
               onClick={onCancel}
             >
               <i className="bi bi-x-lg me-2"></i>Annuler
@@ -264,14 +265,6 @@ function AbsenceForm({ absence, onCancel, onSave }) {
           </div>
         </form>
       </div>
-      <style>{`
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .bg-soft-dark-navy { background-color: #e7f1ff; }
-        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; }
-        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
-        .custom-switch .form-check-input:checked { background-color: #198754; border-color: #198754; }
-      `}</style>
     </div>
   );
 }

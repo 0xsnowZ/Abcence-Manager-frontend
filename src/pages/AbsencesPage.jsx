@@ -9,14 +9,14 @@ import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 
 function AbsencesPage() {
-  const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const navigate  = useNavigate();
+  const dispatch  = useDispatch();
   const { loading, error } = useSelector((state) => state.absences);
   const stagiaires = useSelector((state) => state.stagiaires.items);
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingAbsence, setEditingAbsence] = useState(null);
-  const [filters, setFilters] = useState({
+  const [showForm,        setShowForm]        = useState(false);
+  const [editingAbsence,  setEditingAbsence]  = useState(null);
+  const [filters,         setFilters]         = useState({
     filterType: "all",
     dateRange: null,
     stagiaireFilter: null,
@@ -28,56 +28,47 @@ function AbsencesPage() {
     if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 
-  const handleEdit = (absence) => {
-    setEditingAbsence(absence);
-    setShowForm(true);
-  };
-
-  const handleSave = () => {
-    setShowForm(false);
-    setEditingAbsence(null);
-  };
-
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingAbsence(null);
-  };
-
-  const handleFilterChange = (newFilters) => {
-    setFilters(newFilters);
-  };
+  const handleEdit         = (absence) => { setEditingAbsence(absence); setShowForm(true); };
+  const handleSave         = ()        => { setShowForm(false); setEditingAbsence(null); };
+  const handleCancel       = ()        => { setShowForm(false); setEditingAbsence(null); };
+  const handleFilterChange = (f)       => setFilters(f);
 
   return (
-    <div className="container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-5">
+    <div className="container-xxl px-4 py-5">
+
+      {/* ── Page header ── */}
+      <div className="d-flex justify-content-between align-items-start mb-5">
         <div>
-          <h2 className="fw-bold mb-1">
-            <i className="bi bi-calendar-x-fill me-3 text-dark-navy"></i>
-            Gestion des Absences
-          </h2>
-          <p className="text-muted mb-0">Suivi et gestion des absences individuelles.</p>
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <div className="abs-page-icon">
+              <i className="bi bi-calendar-x-fill"></i>
+            </div>
+            <h1 className="page-title mb-0">Gestion des Absences</h1>
+          </div>
+          <p className="body-sm mb-0">Suivi et gestion des absences individuelles.</p>
         </div>
+
         {!showForm && (
           <button
-            className="btn btn-dark-navy rounded-pill px-4 py-2 shadow fw-bold d-flex align-items-center"
+            className="btn-navy d-flex align-items-center gap-2"
             onClick={() => navigate("/saisie")}
           >
-            <i className="bi bi-plus-circle-fill me-2 fs-5"></i>
+            <i className="bi bi-plus-circle-fill"></i>
             Déclarer une Absence
           </button>
         )}
       </div>
 
       {error && (
-        <div className="alert alert-danger mb-4">
+        <div className="alert alert-danger rounded-3 mb-4">
           <i className="bi bi-exclamation-triangle me-2"></i>{error}
         </div>
       )}
 
       {loading && (
-        <div className="text-center py-3">
-          <div className="spinner-border spinner-border-sm text-dark me-2" role="status" />
-          <span className="text-muted small">Chargement des absences...</span>
+        <div className="text-center py-3 mb-4">
+          <div className="spinner-border spinner-border-sm me-2" style={{ color: "var(--color-primary)" }} role="status" />
+          <span className="body-sm">Chargement des absences…</span>
         </div>
       )}
 
@@ -110,11 +101,7 @@ function AbsencesPage() {
           <CalendarHistory />
         </>
       )}
-      <style>{`
-        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; }
-        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
-        .text-dark-navy { color: #0A121A; }
-      `}</style>
+
     </div>
   );
 }

@@ -78,17 +78,17 @@ function Filters({ onFilterChange }) {
   };
 
   return (
-    <div className="card border-0 shadow-sm">
-      <div className="card-header bg-dark text-white py-3">
-        <h5 className="mb-0 fw-bold small text-uppercase tracking-wider">
-          <i className="bi bi-funnel-fill me-2"></i>
+    <div className="card-premium">
+      <div className="card-header py-3 px-4" style={{ background: "var(--color-primary)" }}>
+        <h5 className="mb-0 label-caps text-white d-flex align-items-center gap-2">
+          <i className="bi bi-funnel-fill"></i>
           Filtrer les Résultats
         </h5>
       </div>
       <div className="card-body p-4">
         {/* Filter by Filière */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase">Classe</label>
+          <label className="form-label label-caps">Classe</label>
           <select
             className="form-select bg-light border-0"
             value={filiereFilter}
@@ -108,7 +108,7 @@ function Filters({ onFilterChange }) {
 
         {/* Filter by Stagiaire */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase">Stagiaire</label>
+          <label className="form-label label-caps">Stagiaire</label>
           <select
             className="form-select bg-light border-0"
             value={stagiaireFilter}
@@ -131,7 +131,7 @@ function Filters({ onFilterChange }) {
 
         {/* Filter by Date Range */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase">Période d'appel</label>
+          <label className="form-label label-caps">Période d'appel</label>
           <div className="position-relative">
             <button
               className="btn btn-white border bg-light btn-sm w-100 d-flex justify-content-between align-items-center shadow-none text-start py-2"
@@ -170,7 +170,7 @@ function Filters({ onFilterChange }) {
 
         {/* Filter by Justification */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase">Type d'absence</label>
+          <label className="form-label label-caps">Type d'absence</label>
           <select
             className="form-select bg-light border-0"
             value={filterType}
@@ -207,13 +207,6 @@ function Filters({ onFilterChange }) {
           </div>
         )}
       </div>
-      <style>{`
-        .bg-soft-primary { background-color: #e7f1ff; }
-        .tracking-wider { letter-spacing: 0.05em; }
-        .x-small-calendar { font-size: 0.75rem !important; }
-        .x-small-calendar .react-calendar__tile { padding: 0.5em 0.2em !important; }
-        .btn-white { background-color: #fff; border-color: #dee2e6; }
-      `}</style>
     </div>
   );
 }

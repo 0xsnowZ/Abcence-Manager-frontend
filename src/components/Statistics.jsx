@@ -91,83 +91,35 @@ function Statistics() {
 
   return (
     <div className="stats-container">
-      {/* Summary Cards */}
+      {/* KPI Cards */}
       <div className="row g-4 mb-5">
+        {/* Total */}
         <div className="col-md-4">
-          <div className="card border-0 shadow-sm h-100 overflow-hidden transition-all hover-lift">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center mb-3">
-                <div
-                  className="bg-dark-navy text-white rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center"
-                  style={{ width: "60px", height: "60px", flexShrink: 0 }}
-                >
-                  <i className="bi bi-calendar-x-fill fs-4"></i>
-                </div>
-                <div>
-                  <h6 className="text-muted mb-0 small fw-bold text-uppercase tracking-wider">
-                    Total des absences
-                  </h6>
-                  <h3 className="fw-bold mb-0 mt-1">{totalAbsences}</h3>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span className="badge rounded-pill bg-light text-dark-navy border px-3 py-1 fw-bold">
-                  {totalHeures}h totales
-                </span>
-              </div>
-            </div>
+          <div className="kpi-card kpi-card--navy hover-lift">
+            <i className="bi bi-calendar-x-fill kpi-bg-icon"></i>
+            <div className="kpi-label">Total des absences</div>
+            <div className="kpi-number">{totalAbsences}</div>
+            <div className="kpi-sub">{totalHeures}h au total</div>
           </div>
         </div>
 
+        {/* Justified */}
         <div className="col-md-4">
-          <div className="card border-0 shadow-sm h-100 overflow-hidden transition-all hover-lift">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center mb-3">
-                <div
-                  className="bg-soft-success text-success rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center"
-                  style={{ width: "60px", height: "60px", flexShrink: 0 }}
-                >
-                  <i className="bi bi-check-circle-fill fs-4"></i>
-                </div>
-                <div>
-                  <h6 className="text-muted mb-0 small fw-bold text-uppercase tracking-wider">
-                    Justifiées
-                  </h6>
-                  <h3 className="fw-bold mb-0 mt-1 text-success">{justifiedCount}</h3>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span className="badge rounded-pill bg-soft-success text-success border border-success px-3 py-1 fw-bold">
-                  {justifiedHeures}h validées
-                </span>
-              </div>
-            </div>
+          <div className="kpi-card kpi-card--success hover-lift">
+            <i className="bi bi-check-circle-fill kpi-bg-icon"></i>
+            <div className="kpi-label">Absences justifiées</div>
+            <div className="kpi-number" style={{ color: "var(--color-success)" }}>{justifiedCount}</div>
+            <div className="kpi-sub">{justifiedHeures}h validées</div>
           </div>
         </div>
 
+        {/* Unjustified */}
         <div className="col-md-4">
-          <div className="card border-0 shadow-sm h-100 overflow-hidden transition-all hover-lift">
-            <div className="card-body p-4">
-              <div className="d-flex align-items-center mb-3">
-                <div
-                  className="bg-soft-danger text-danger rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center"
-                  style={{ width: "60px", height: "60px", flexShrink: 0 }}
-                >
-                  <i className="bi bi-x-circle-fill fs-4"></i>
-                </div>
-                <div>
-                  <h6 className="text-muted mb-0 small fw-bold text-uppercase tracking-wider">
-                    Non Justifiées
-                  </h6>
-                  <h3 className="fw-bold mb-0 mt-1 text-danger">{unjustifiedCount}</h3>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span className="badge rounded-pill bg-soft-danger text-danger border border-danger px-3 py-1 fw-bold">
-                  {unjustifiedHeures}h à régulariser
-                </span>
-              </div>
-            </div>
+          <div className="kpi-card kpi-card--danger hover-lift">
+            <i className="bi bi-x-circle-fill kpi-bg-icon"></i>
+            <div className="kpi-label">Non justifiées</div>
+            <div className="kpi-number" style={{ color: "var(--color-danger)" }}>{unjustifiedCount}</div>
+            <div className="kpi-sub">{unjustifiedHeures}h à régulariser</div>
           </div>
         </div>
       </div>
@@ -175,22 +127,19 @@ function Statistics() {
       {/* Progress & Recent absences */}
       <div className="row g-4 mb-5">
         <div className="col-lg-5">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-header bg-white py-3 border-bottom-0 d-flex align-items-center">
-              <div
-                className="bg-info text-white rounded-circle me-3 shadow-sm d-flex align-items-center justify-content-center"
-                style={{ width: "48px", height: "48px", flexShrink: 0 }}
-              >
-                <i className="bi bi-pie-chart-fill"></i>
-              </div>
-              <h5 className="mb-0 fw-bold">Répartition Analytique</h5>
+          <div className="card-premium h-100">
+            <div className="card-header py-3 px-4 d-flex align-items-center gap-3">
+              <span className="avatar-circle avatar-md" style={{ background: "var(--color-info-light)", color: "var(--color-info)" }}>
+                <i className="bi bi-pie-chart-fill" style={{ fontSize: "0.9rem" }}></i>
+              </span>
+              <h5 className="section-title mb-0">Répartition Analytique</h5>
             </div>
             <div className="card-body pt-0">
               {totalAbsences > 0 ? (
                 <div className="px-2">
                   <div className="mb-4">
                     <div className="d-flex justify-content-between mb-2">
-                      <span className="fw-bold small text-muted text-uppercase">
+                      <span className="label-caps">
                         Taux de justification
                       </span>
                       <span className="badge bg-soft-success text-success rounded-pill px-3">
@@ -210,7 +159,7 @@ function Statistics() {
                   </div>
                   <div className="mb-2">
                     <div className="d-flex justify-content-between mb-2">
-                      <span className="fw-bold small text-muted text-uppercase">
+                      <span className="label-caps">
                         Taux d'irrégularité
                       </span>
                       <span className="badge bg-soft-danger text-danger rounded-pill px-3">
@@ -240,15 +189,12 @@ function Statistics() {
         </div>
 
         <div className="col-lg-7">
-          <div className="card border-0 shadow-sm h-100">
-            <div className="card-header bg-white py-4 border-bottom-0 d-flex justify-content-between align-items-center">
-              <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-                <div
-                  className="bg-soft-danger text-danger rounded-circle me-3 d-flex align-items-center justify-content-center"
-                  style={{ width: "48px", height: "48px", flexShrink: 0 }}
-                >
-                  <i className="bi bi-clock-history"></i>
-                </div>
+          <div className="card-premium h-100">
+            <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
+              <h5 className="section-title mb-0 d-flex align-items-center gap-3">
+                <span className="avatar-circle avatar-md" style={{ background: "var(--color-danger-light)", color: "var(--color-danger)" }}>
+                  <i className="bi bi-clock-history" style={{ fontSize: "0.9rem" }}></i>
+                </span>
                 Dernières absences
               </h5>
             </div>
@@ -261,7 +207,7 @@ function Statistics() {
               ) : (
                 <div className="table-responsive">
                   <table className="table align-middle custom-table">
-                    <thead className="bg-light text-muted small text-uppercase fw-bold">
+                    <thead className="label-caps bg-light">
                       <tr>
                         <th className="ps-3 border-0">Date</th>
                         <th className="border-0">Stagiaire</th>
@@ -287,7 +233,7 @@ function Statistics() {
                               <span className="fw-bold text-dark d-block mb-0">
                                 {displayName}
                               </span>
-                              <small className="text-muted">{filiere}</small>
+                              <small className="body-sm">{filiere}</small>
                             </td>
                             <td className="text-center fw-bold text-dark">
                               {getHours(absence)}h
@@ -315,20 +261,6 @@ function Statistics() {
         </div>
       </div>
 
-      <style>{`
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .bg-soft-primary { background-color: #f0f7ff; }
-        .bg-soft-danger { background-color: #fff1f1; }
-        .bg-soft-success { background-color: #f0fff4; }
-        .bg-soft-warning { background-color: #fffbf0; }
-        .tracking-wider { letter-spacing: 0.05em; }
-        .hover-lift { transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
-        .hover-lift:hover { transform: translateY(-5px); }
-        .custom-table tbody tr { border-color: #f8f9fa; }
-        .custom-table tbody tr:last-child { border-bottom: none; }
-        .card { border: 1px solid rgba(0,0,0,0.05) !important; }
-      `}</style>
     </div>
   );
 }

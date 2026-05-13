@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser } from "../store/authSlice.jsx";
 import { useNavigate } from "react-router-dom";
@@ -6,273 +6,414 @@ import logo from "../assets/ofppt-logo.jpeg";
 import leftBg from "../assets/left-bg.webp";
 
 function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const {
-    isAuthenticated,
-    error,
-    loading: isLoading,
-  } = useSelector((state) => state.auth);
+  const { isAuthenticated, error, loading: isLoading } = useSelector((s) => s.auth);
 
   useEffect(() => {
-    // Redirect if already logged in
-    if (isAuthenticated) {
-      navigate("/");
-    }
+    if (isAuthenticated) navigate("/");
   }, [isAuthenticated, navigate]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
     dispatch(loginUser({ email, password }));
   };
 
   return (
-    <div
-      style={{
-        backgroundColor: "#eef2f5",
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-      }}
-    >
-      <div
-        className="card border-0 shadow-lg"
-        style={{
-          width: "100%",
-          maxWidth: "1000px",
-          borderRadius: "1rem",
-          overflow: "hidden",
-          minHeight: "600px",
-        }}
-      >
-        <div className="row g-0 h-100" style={{ minHeight: "600px" }}>
-          {/* Left Side */}
-          <div
-            className="col-md-6 d-none d-md-flex flex-column justify-content-center p-5 position-relative"
-            style={{
-              backgroundColor: "#0f7162",
-              backgroundImage: `url(${leftBg})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-              backgroundRepeat: "no-repeat",
-              color: "white",
-            }}
-          >
-            {/* Adding a subtle overlay so the text remains readable over the image */}
-            <div
-              className="position-absolute top-0 start-0 w-100 h-100"
-              style={{ backgroundColor: "rgba(15, 113, 98, 0.85)" }}
-            ></div>
-            <div
-              className="position-relative z-1"
-              style={{ maxWidth: "400px", margin: "0 auto" }}
-            >
-              <h2
-                className="fw-bold mb-3"
-                style={{ fontSize: "2rem", lineHeight: "1.2" }}
-              >
-                Bienvenue au système
-                <br />
-                de Gestion des Absences
-              </h2>
-              <p className="mb-0" style={{ fontSize: "1rem", opacity: "0.9" }}>
-                Plateforme de suivi et de gestion des absences des stagiaires de
-                l'OFPPT.
-              </p>
+    <div className="login-root">
+      <div className="login-card">
 
-              <div className="mt-4 d-flex gap-2">
-                <span
-                  style={{
-                    width: "40px",
-                    height: "4px",
-                    backgroundColor: "#fff",
-                    display: "block",
-                    borderRadius: "2px",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    width: "40px",
-                    height: "4px",
-                    backgroundColor: "rgba(255,255,255,0.4)",
-                    display: "block",
-                    borderRadius: "2px",
-                  }}
-                ></span>
-                <span
-                  style={{
-                    width: "40px",
-                    height: "4px",
-                    backgroundColor: "rgba(255,255,255,0.4)",
-                    display: "block",
-                    borderRadius: "2px",
-                  }}
-                ></span>
-              </div>
-            </div>
+        {/* ── Left panel ── */}
+        <div className="login-left d-none d-md-flex" style={{ backgroundImage: `url(${leftBg})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+          {/* Color overlay (like old design) */}
+          <div className="login-left-overlay" />
+          {/* Dot grid overlay */}
+          <div className="login-left-dots" />
 
-            <div
-              className="position-absolute"
-              style={{
-                bottom: "2rem",
-                left: "3rem",
-                fontSize: "0.85rem",
-                opacity: "0.8",
-              }}
-            >
-              © 2026 OFPPT — La voie de l'avenir
+          <div className="login-left-content">
+            <h2 className="login-hero-title">
+              Bienvenue au système<br />
+              de Gestion des Absences
+            </h2>
+            <p className="login-hero-sub">
+              Plateforme de suivi et de gestion des absences des stagiaires de l'OFPPT.
+            </p>
+
+            {/* Feature pills */}
+            <div className="d-flex flex-column gap-2 mt-4">
+              {[
+                { icon: "bi-people-fill",      text: "Suivi par stagiaire" },
+                { icon: "bi-calendar-check",   text: "Registre d'appel numérique" },
+                { icon: "bi-graph-up-arrow",   text: "Statistiques en temps réel" },
+              ].map((f) => (
+                <div key={f.text} className="login-feature-pill">
+                  <i className={`bi ${f.icon}`}></i>
+                  <span>{f.text}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Right Side */}
-          <div className="col-md-6 d-flex flex-column justify-content-center p-5 bg-white">
-            <div
-              className="w-100"
-              style={{ maxWidth: "380px", margin: "0 auto" }}
-            >
-              <div className="text-center mb-4">
-                <img
-                  src={logo}
-                  alt="OFPPT Logo"
-                  style={{ height: "90px", objectFit: "contain" }}
-                />
-              </div>
+          <div className="login-left-footer">
+            © 2026 OFPPT — La voie de l'avenir
+          </div>
+        </div>
 
-              <div className="text-center mb-5">
-                <h3
-                  className="fw-bold mb-1"
-                  style={{ color: "#111827", fontSize: "1.75rem" }}
-                >
-                  Connexion
-                </h3>
-                <p className="text-muted" style={{ fontSize: "0.95rem" }}>
-                  Connectez-vous pour accéder au système
-                </p>
-              </div>
+        {/* ── Right panel ── */}
+        <div className="login-right">
+          <div className="login-form-wrap">
 
-              {error && (
-                <div className="alert alert-danger py-2 small rounded mb-4 text-center">
-                  {error}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit}>
-                <div className="mb-3">
-                  <label
-                    className="form-label fw-bold text-secondary text-uppercase mb-2"
-                    style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
-                  >
-                    Nom d'utilisateur
-                  </label>
-                  <div className="input-group">
-                    <span
-                      className="input-group-text bg-transparent text-muted px-3"
-                      style={{
-                        borderRight: "none",
-                        borderRadius: "0.5rem 0 0 0.5rem",
-                      }}
-                    >
-                      <i className="bi bi-person"></i>
-                    </span>
-                    <input
-                      type="text"
-                      className="form-control text-muted"
-                      style={{
-                        borderLeft: "none",
-                        borderRadius: "0 0.5rem 0.5rem 0",
-                        padding: "0.7rem 0.7rem 0.7rem 0",
-                        boxShadow: "none",
-                      }}
-                      placeholder="Entrez votre identifiant"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-4">
-                  <label
-                    className="form-label fw-bold text-secondary text-uppercase mb-2"
-                    style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}
-                  >
-                    Mot de passe
-                  </label>
-                  <div className="input-group">
-                    <span
-                      className="input-group-text bg-transparent text-muted px-3"
-                      style={{
-                        borderRight: "none",
-                        borderRadius: "0.5rem 0 0 0.5rem",
-                      }}
-                    >
-                      <i className="bi bi-lock"></i>
-                    </span>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      className="form-control text-muted"
-                      style={{
-                        borderLeft: "none",
-                        borderRight: "none",
-                        padding: "0.7rem 0",
-                        boxShadow: "none",
-                      }}
-                      placeholder="Entrez votre mot de passe"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <span
-                      className="input-group-text bg-transparent text-muted px-3 cursor-pointer"
-                      style={{
-                        borderLeft: "none",
-                        borderRadius: "0 0.5rem 0.5rem 0",
-                        cursor: "pointer",
-                      }}
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      <i
-                        className={`bi bi-eye${showPassword ? "-slash" : ""}`}
-                      ></i>
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn w-100 fw-bold d-flex align-items-center justify-content-center gap-2 mb-4"
-                  style={{
-                    backgroundColor: "#009665",
-                    color: "#fff",
-                    padding: "0.8rem",
-                    borderRadius: "0.5rem",
-                    boxShadow: "0 4px 6px rgba(0, 150, 101, 0.2)",
-                  }}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <span
-                      className="spinner-border spinner-border-sm"
-                      role="status"
-                      aria-hidden="true"
-                    ></span>
-                  ) : (
-                    <>
-                      Se connecter <i className="bi bi-arrow-right"></i>
-                    </>
-                  )}
-                </button>
-              </form>
+            {/* Logo */}
+            <div className="text-center mb-4">
+              <img src={logo} alt="OFPPT Logo" className="login-logo" />
             </div>
+
+            {/* Heading */}
+            <div className="text-center mb-5">
+              <h3 className="login-title">Connexion</h3>
+              <p className="login-subtitle">Connectez-vous pour accéder au système</p>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div className="login-error">
+                <i className="bi bi-exclamation-circle-fill me-2"></i>{error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit}>
+              {/* Email */}
+              <div className="mb-4">
+                <label className="login-label">Nom d'utilisateur</label>
+                <div className="login-input-wrap">
+                  <i className="bi bi-person login-input-icon"></i>
+                  <input
+                    type="text"
+                    className="login-input"
+                    placeholder="Entrez votre identifiant"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="mb-5">
+                <label className="login-label">Mot de passe</label>
+                <div className="login-input-wrap">
+                  <i className="bi bi-lock login-input-icon"></i>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="login-input login-input--padded-end"
+                    placeholder="Entrez votre mot de passe"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    className="login-eye-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    <i className={`bi bi-eye${showPassword ? "-slash" : ""}`}></i>
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                className="login-submit-btn"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="spinner-border spinner-border-sm" role="status" />
+                ) : (
+                  <>Se connecter <i className="bi bi-arrow-right ms-1"></i></>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       </div>
+
+      <style>{`
+        /* ── Root ── */
+        .login-root {
+          min-height: 100vh;
+          background: var(--color-bg);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 1.5rem;
+        }
+
+        /* ── Card ── */
+        .login-card {
+          display: flex;
+          width: 100%;
+          max-width: 980px;
+          min-height: 620px;
+          border-radius: var(--radius-xl);
+          overflow: hidden;
+          box-shadow: var(--shadow-lg), 0 0 0 1px var(--color-border);
+        }
+
+        /* ── Left ── */
+        .login-left {
+          flex: 1;
+          background-color: #0A121A;
+          position: relative;
+          flex-direction: column;
+          justify-content: center;
+          padding: 3rem;
+          color: #fff;
+          overflow: hidden;
+        }
+
+        /* Color overlay */
+        .login-left-overlay {
+          position: absolute;
+          inset: 0;
+          background-color: rgba(10, 18, 26, 0.82);
+          pointer-events: none;
+        }
+
+        /* Dot grid pattern */
+        .login-left-dots {
+          position: absolute;
+          inset: 0;
+          background-image: radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1px);
+          background-size: 24px 24px;
+          pointer-events: none;
+        }
+
+        /* Glowing circle decoration */
+        .login-left::before {
+          content: '';
+          position: absolute;
+          width: 320px; height: 320px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%);
+          bottom: -80px; right: -80px;
+          pointer-events: none;
+        }
+        .login-left::after {
+          content: '';
+          position: absolute;
+          width: 200px; height: 200px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+          top: -40px; left: -40px;
+          pointer-events: none;
+        }
+
+        .login-left-content { position: relative; z-index: 1; }
+
+        .login-brand-mark {
+          width: 52px; height: 52px;
+          background: rgba(59,130,246,0.2);
+          border: 1px solid rgba(59,130,246,0.4);
+          border-radius: var(--radius-md);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.4rem;
+          color: #60a5fa;
+          margin-bottom: 1.5rem;
+        }
+
+        .login-hero-title {
+          font-size: 1.65rem;
+          font-weight: 700;
+          line-height: 1.25;
+          letter-spacing: -0.02em;
+          margin-bottom: 0.75rem;
+          color: #fff;
+        }
+
+        .login-hero-sub {
+          font-size: 0.9rem;
+          color: rgba(255,255,255,0.6);
+          line-height: 1.6;
+          margin-bottom: 0;
+        }
+
+        .login-feature-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.6rem;
+          background: rgba(255,255,255,0.07);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: var(--radius-pill);
+          padding: 0.4rem 1rem;
+          font-size: 0.82rem;
+          color: rgba(255,255,255,0.8);
+        }
+        .login-feature-pill i { color: #60a5fa; }
+
+        .login-left-footer {
+          position: absolute;
+          bottom: 1.5rem; left: 3rem;
+          font-size: 0.75rem;
+          color: rgba(255,255,255,0.35);
+          z-index: 1;
+        }
+
+        /* ── Right ── */
+        .login-right {
+          flex: 1;
+          background: var(--color-surface);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3rem 2.5rem;
+          border-top: 4px solid var(--color-accent);
+        }
+
+        .login-form-wrap {
+          width: 100%;
+          max-width: 360px;
+        }
+
+        .login-logo {
+          height: 80px;
+          object-fit: contain;
+        }
+
+        .login-title {
+          font-size: 1.65rem;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          color: var(--color-text);
+          margin-bottom: 0.25rem;
+        }
+
+        .login-subtitle {
+          font-size: 0.875rem;
+          color: var(--color-text-muted);
+          margin: 0;
+        }
+
+        /* Error */
+        .login-error {
+          background: var(--color-danger-light);
+          color: var(--color-danger);
+          border: 1px solid rgba(220,38,38,0.2);
+          border-radius: var(--radius-md);
+          padding: 0.6rem 0.9rem;
+          font-size: 0.85rem;
+          margin-bottom: 1.25rem;
+          display: flex;
+          align-items: center;
+        }
+
+        /* Label */
+        .login-label {
+          display: block;
+          font-size: 0.72rem;
+          font-weight: 600;
+          letter-spacing: 0.07em;
+          text-transform: uppercase;
+          color: var(--color-text-muted);
+          margin-bottom: 0.5rem;
+        }
+
+        /* Input */
+        .login-input-wrap {
+          position: relative;
+          display: flex;
+          align-items: center;
+        }
+
+        .login-input-icon {
+          position: absolute;
+          left: 0.875rem;
+          color: var(--color-text-light);
+          font-size: 0.95rem;
+          pointer-events: none;
+        }
+
+        .login-input {
+          width: 100%;
+          height: 48px;
+          padding: 0 1rem 0 2.5rem;
+          border: 1.5px solid var(--color-border);
+          border-radius: var(--radius-md);
+          font-size: 0.9rem;
+          color: var(--color-text);
+          background: var(--color-surface);
+          outline: none;
+          transition: border-color 0.15s, box-shadow 0.15s;
+          font-family: inherit;
+        }
+
+        .login-input--padded-end { padding-right: 2.75rem; }
+
+        .login-input:focus {
+          border-color: var(--color-accent);
+          box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+
+        .login-input::placeholder { color: var(--color-text-light); }
+
+        .login-eye-btn {
+          position: absolute;
+          right: 0.875rem;
+          background: none;
+          border: none;
+          color: var(--color-text-light);
+          cursor: pointer;
+          padding: 0;
+          font-size: 0.95rem;
+          line-height: 1;
+          transition: color 0.15s;
+        }
+        .login-eye-btn:hover { color: var(--color-text-muted); }
+
+        /* Submit */
+        .login-submit-btn {
+          width: 100%;
+          height: 48px;
+          background: linear-gradient(135deg, var(--color-primary) 0%, #1e3a5f 100%);
+          color: #fff;
+          border: none;
+          border-radius: var(--radius-md);
+          font-size: 0.95rem;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          transition: opacity 0.2s, box-shadow 0.2s, transform 0.15s;
+          letter-spacing: 0.01em;
+        }
+
+        .login-submit-btn:hover:not(:disabled) {
+          box-shadow: 0 6px 20px rgba(10,18,26,0.3);
+          transform: translateY(-1px);
+          opacity: 0.95;
+        }
+
+        .login-submit-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 767px) {
+          .login-card { flex-direction: column; min-height: auto; border-radius: var(--radius-lg); }
+          .login-right { border-top: 4px solid var(--color-accent); padding: 2rem 1.5rem; }
+        }
+      `}</style>
     </div>
   );
 }

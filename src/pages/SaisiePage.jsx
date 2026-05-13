@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useToast } from "../components/ToastProvider.jsx";
 import { useDispatch, useSelector } from "react-redux";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -15,6 +16,7 @@ import {
 
 // Saisie Page
 function SaisiePage() {
+  const showToast = useToast();
   const dispatch = useDispatch();
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const allAbsences = useSelector((state) => state.absences.items);
@@ -101,8 +103,6 @@ function SaisiePage() {
 
   // saisieData: { [`${stagId}|${dateStr}|${slotIdx}`]: boolean }
   const [saisieData, setSaisieData] = useState({});
-  const [successMessage, setSuccessMessage] = useState("");
-  const [submitError, setSubmitError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filtered programmes list (restrict for profs)
@@ -192,9 +192,16 @@ function SaisiePage() {
     setSaisieData({});
     setSelectedProgrammeId("");
     setDateRange(getCurrentWeek());
-    setSuccessMessage("");
-    setSubmitError("");
   };
+
+  // Warn user before leaving with unsaved attendance data
+  useEffect(() => {
+    const hasUnsaved = Object.values(saisieData).some(Boolean);
+    if (!hasUnsaved) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [saisieData]);
 
   const handleSubmit = useCallback(
     async (e) => {
@@ -204,13 +211,11 @@ function SaisiePage() {
       // Collect checked cells: { `stagId|dateStr|slotIdx` }
       const checkedEntries = Object.entries(saisieData).filter(([, v]) => v);
       if (checkedEntries.length === 0) {
-        setSuccessMessage("Aucune nouvelle absence à enregistrer.");
-        setTimeout(() => setSuccessMessage(""), 3000);
+        showToast("Aucune nouvelle absence à enregistrer.", "warning");
         return;
       }
 
       setIsSubmitting(true);
-      setSubmitError("");
 
       try {
         // Group by (date, slotIdx) → need one session per (programme, date, time_block)
@@ -229,7 +234,7 @@ function SaisiePage() {
           const [dateStr, slotIdx] = dsKey.split("|");
           const slot = slots[parseInt(slotIdx) - 1];
           if (!slot || !slot.timeBlockId) {
-            console.warn("No timeBlockId for slot", slotIdx);
+            showToast("Créneau invalide, veuillez recharger la page.", "warning");
             continue;
           }
 
@@ -260,14 +265,12 @@ function SaisiePage() {
         // Refresh absences list
         dispatch(fetchAttendances());
 
-        setSuccessMessage(
-          `${totalAdded} absence(s) enregistrée(s) avec succès.`,
-        );
+        showToast(`${totalAdded} absence(s) enregistrée(s) avec succès.`, "success");
         setSaisieData({});
-        setTimeout(() => setSuccessMessage(""), 5000);
       } catch (err) {
-        setSubmitError(
+        showToast(
           typeof err === "string" ? err : err?.message || "Une erreur est survenue lors de la soumission.",
+          "error",
         );
       } finally {
         setIsSubmitting(false);
@@ -280,31 +283,33 @@ function SaisiePage() {
     availableProgrammes.length === 1 ? availableProgrammes[0] : null;
 
   return (
-    <div className="container py-4">
-      <div className="mb-4">
-        <h2 className="fw-bold">
-          <i className="bi bi-person-badge me-2 text-dark-navy"></i>
-          Registre de Présence
-        </h2>
-        <p className="text-muted">
-          Saisie par séances (S1–S4) de 2h30 chacune. Cliquez sur une case pour marquer une absence.
-        </p>
+    <div className="container-xxl px-4 py-5">
+      <div className="d-flex align-items-start gap-3 mb-5">
+        <div className="saisie-page-icon">
+          <i className="bi bi-person-badge"></i>
+        </div>
+        <div>
+          <h1 className="page-title mb-1">Registre de Présence</h1>
+          <p className="body-sm mb-0">
+            Saisie par séances (S1–S4) de 2h30 chacune. Cliquez sur une case pour marquer une absence.
+          </p>
+        </div>
       </div>
 
       <div
-        className="card mb-4 border-0 shadow-sm"
+        className="card-premium mb-4"
         style={{ position: "relative", zIndex: 9999 }}
       >
-        <div className="card-header bg-dark text-white py-3">
-          <h5 className="mb-0 small text-uppercase fw-bold tracking-wider">
-            <i className="bi bi-gear-fill me-2"></i>Configuration du Registre
-          </h5>
+        <div className="card-header py-3 px-4">
+          <h6 className="mb-0 label-caps d-flex align-items-center gap-2">
+            <i className="bi bi-gear-fill"></i>Configuration du Registre
+          </h6>
         </div>
         <div className="card-body bg-light border-bottom">
           <div className="row g-4 align-items-end">
             {/* Programme / Filière select */}
             <div className="col-lg-4">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Classe / Filière
               </label>
               <div className="input-group input-group-lg">
@@ -394,7 +399,7 @@ function SaisiePage() {
 
             {/* Date range picker */}
             <div className="col-lg-5">
-              <label className="form-label fw-bold small text-muted text-uppercase">
+              <label className="form-label label-caps">
                 Période d'appel
               </label>
               <div className="position-relative">
@@ -461,40 +466,20 @@ function SaisiePage() {
         </div>
       </div>
 
-      {/* Success / Error alerts */}
-      {successMessage && (
-        <div className="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4 fade show">
-          <i className="bi bi-check-circle-fill fs-4 me-3"></i>
-          <div className="fw-medium">{successMessage}</div>
-        </div>
-      )}
-      {submitError && (
-        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4">
-          <i className="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
-          <div className="fw-medium">{submitError}</div>
-          <button
-            type="button"
-            className="btn-close ms-auto"
-            onClick={() => setSubmitError("")}
-          ></button>
-        </div>
-      )}
 
       {dateColumns.length > 0 && selectedProgramme ? (
         filteredStagiaires.length > 0 ? (
           <form onSubmit={handleSubmit}>
-            <div className="card border-0 shadow-lg overflow-hidden">
-              <div className="card-header bg-white py-4 border-bottom-0">
+            <div className="card-premium overflow-hidden">
+              <div className="card-header py-4 px-4">
                 <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
-                    <span className="bg-dark-navy text-white p-2 rounded me-3">
-                      <i className="bi bi-people-fill"></i>
+                  <h5 className="mb-0 section-title d-flex align-items-center gap-3">
+                    <span className="avatar-circle avatar-md avatar-navy">
+                      <i className="bi bi-people-fill" style={{ fontSize: "0.9rem" }}></i>
                     </span>
                     {selectedProgramme.code_diplome}
                     {selectedProgramme.libelle && (
-                      <span className="text-muted fw-normal ms-2 small">
-                        — {selectedProgramme.libelle}
-                      </span>
+                      <span className="body-sm fw-normal">— {selectedProgramme.libelle}</span>
                     )}
                   </h5>
                   <div className="d-flex gap-4">
@@ -515,10 +500,10 @@ function SaisiePage() {
                 </div>
               </div>
 
-              <div className="table-responsive" style={{ maxHeight: "65vh", overflowY: "auto" }}>
-                <table className="table table-bordered table-sm mb-0 align-middle professional-grid">
-                  <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 #ced4da, 0 2px 0 #adb5bd" }}>
-                    <tr className="bg-light">
+              <div className="table-responsive scroll-thin" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+                <table className="table table-sm mb-0 align-middle professional-grid">
+                  <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 var(--color-border), 0 2px 0 var(--color-border-strong)" }}>
+                    <tr style={{ background: "var(--color-bg)" }}>
                       <th
                         rowSpan="2"
                         className="ps-4 border-bottom-0 sticky-col"
@@ -621,10 +606,11 @@ function SaisiePage() {
                 </table>
               </div>
 
-              <div className="card-footer bg-light p-4 text-center border-top-0">
+              <div className="card-footer p-4 text-center">
                 <button
                   type="submit"
-                  className="btn btn-dark-navy px-5 py-3 btn-lg shadow rounded-pill fw-bold"
+                  className="btn-navy px-5 py-3"
+                  style={{ fontSize: "0.95rem", borderRadius: "var(--radius-pill)" }}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -652,59 +638,22 @@ function SaisiePage() {
             </div>
           </form>
         ) : (
-          <div className="text-center py-5 bg-white border rounded shadow-sm">
-            <i
-              className="bi bi-people text-muted opacity-25"
-              style={{ fontSize: "4rem" }}
-            ></i>
-            <h5 className="mt-3 text-muted">
-              Aucun stagiaire trouvé pour cette filière
-            </h5>
-            <p className="text-muted small">
-              Ajoutez des stagiaires dans la page Stagiaires d'abord.
-            </p>
+          <div className="card-premium text-center py-5 px-4">
+            <i className="bi bi-people opacity-25" style={{ fontSize: "4rem", color: "var(--color-text-muted)" }}></i>
+            <div className="section-title mt-3 mb-1">Aucun stagiaire trouvé</div>
+            <p className="body-sm mb-0">Ajoutez des stagiaires dans la page Stagiaires d'abord.</p>
           </div>
         )
       ) : (
-        <div
-          className="text-center py-5 bg-white border rounded shadow-sm"
-          style={{ borderStyle: "dashed" }}
-        >
-          <i
-            className="bi bi-layout-three-columns text-dark-navy opacity-25"
-            style={{ fontSize: "5rem" }}
-          ></i>
-          <h4 className="mt-3 text-dark fw-bold">Registre d'Appel Prêt</h4>
-          <p className="text-muted">
-            Sélectionnez une filière et une période pour charger la grille de
-            saisie professionnelle.
+        <div className="card-premium text-center py-5 px-4" style={{ borderStyle: "dashed" }}>
+          <i className="bi bi-layout-three-columns opacity-25" style={{ fontSize: "5rem", color: "var(--color-primary)" }}></i>
+          <div className="section-title mt-3 mb-1">Registre d'Appel Prêt</div>
+          <p className="body-sm mb-0">
+            Sélectionnez une filière et une période pour charger la grille de saisie professionnelle.
           </p>
         </div>
       )}
 
-      <style>{`
-        .professional-grid { border-collapse: collapse; width: 100%; border: 2px solid #ced4da; }
-        .professional-grid th, .professional-grid td { border: 1px solid #dee2e6 !important; }
-        .professional-grid thead tr:first-child th { border-bottom: 1px solid #dee2e6 !important; }
-        .professional-grid thead th { background-color: #f8f9fa; }
-        .date-group-start { border-left: 2px solid #adb5bd !important; }
-        .border-end-heavy { border-right: 2px solid #adb5bd !important; }
-        .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
-        .cell-slot { cursor: pointer; transition: background 0.2s; position: relative; }
-        .cell-slot:hover { background-color: #f1f3f5; }
-        .is-absent { background-color: #dc3545 !important; border-color: #dc3545 !important; }
-        .is-submitted { background-color: #0A121A !important; border-color: #0A121A !important; cursor: default !important; }
-        .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: #ced4da; border-radius: 50%; }
-        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; transition: all 0.2s; }
-        .btn-dark-navy:hover:not(:disabled) { background-color: #1a232f; border-color: #1a232f; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .hover-row:hover td:not(.is-absent):not(.is-submitted) { background-color: #e8f0fe !important; transition: background-color 0.15s ease; }
-        .bg-dark-navy { background-color: #0A121A; }
-        .text-dark-navy { color: #0A121A; }
-        .classe-dropdown-item:hover { background-color: #e8f0fe; }
-        .classe-dropdown { margin-top: 2px; }
-        .btn-white { background-color: #fff; border-color: #dee2e6; }
-        .tracking-wider { letter-spacing: 0.05em; }
-      `}</style>
     </div>
   );
 }

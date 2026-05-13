@@ -14,7 +14,17 @@ const SECTEUR_ICONS = {
   FGT: "bi-tree-fill",
   AGC: "bi-bar-chart-fill",
 };
-const defaultIcon = "bi-grid-fill";
+const SECTEUR_COLORS = {
+  DIA: { bg: "#eff6ff", color: "#2563eb" },
+  GE:  { bg: "#fffbeb", color: "#d97706" },
+  BTP: { bg: "#f0fdf4", color: "#16a34a" },
+  GC:  { bg: "#fdf4ff", color: "#9333ea" },
+  TH:  { bg: "#fff7ed", color: "#ea580c" },
+  FGT: { bg: "#f0fdf4", color: "#15803d" },
+  AGC: { bg: "#eff6ff", color: "#1d4ed8" },
+};
+const defaultIcon  = "bi-grid-fill";
+const defaultColor = { bg: "var(--color-primary-light)", color: "var(--color-primary)" };
 
 function StagiairesPage() {
   const dispatch = useDispatch();
@@ -25,19 +35,16 @@ function StagiairesPage() {
   const { items: secteurs, programmesBySecteur, loading: loadingSecteurs, loadingProgrammes } =
     useSelector((s) => s.secteurs);
 
-  // navigation: secteur object → programme code_diplome string → stagiaire list
-  const [selectedSecteur,    setSelectedSecteur]    = useState(null);
-  const [selectedProgramme,  setSelectedProgramme]  = useState(null); // code_diplome
-
-  const [showForm,          setShowForm]          = useState(false);
-  const [editingStagiaire,  setEditingStagiaire]  = useState(null);
+  const [selectedSecteur,   setSelectedSecteur]   = useState(null);
+  const [selectedProgramme, setSelectedProgramme] = useState(null);
+  const [showForm,          setShowForm]           = useState(false);
+  const [editingStagiaire,  setEditingStagiaire]   = useState(null);
 
   useEffect(() => {
     dispatch(fetchStagiaires());
     dispatch(fetchSecteurs());
   }, [dispatch]);
 
-  // fetch programmes for the selected secteur (cached)
   useEffect(() => {
     if (selectedSecteur && !programmesBySecteur[selectedSecteur.id]) {
       dispatch(fetchProgrammesBySecteur(selectedSecteur.id));
@@ -49,42 +56,40 @@ function StagiairesPage() {
     [isProf, user]
   );
 
-  // programmes to show at level 2 (filtered for prof)
   const currentProgrammes = useMemo(() => {
     if (!selectedSecteur) return [];
     const all = programmesBySecteur[selectedSecteur.id] || [];
     return profCodes.length > 0 ? all.filter((p) => profCodes.includes(p.code_diplome)) : all;
   }, [selectedSecteur, programmesBySecteur, profCodes]);
 
-  const handleEdit  = (s) => { setEditingStagiaire(s); setShowForm(true); };
-  const handleAddNew = () => { setEditingStagiaire(null); setShowForm(true); };
-  const handleSave  = () => {
-    setShowForm(false);
-    setEditingStagiaire(null);
-    dispatch(fetchStagiaires());
-  };
+  const handleEdit   = (s) => { setEditingStagiaire(s); setShowForm(true); };
+  const handleAddNew = ()  => { setEditingStagiaire(null); setShowForm(true); };
+  const handleSave   = ()  => { setShowForm(false); setEditingStagiaire(null); dispatch(fetchStagiaires()); };
 
   const isLoading = loadingStagiaires || loadingSecteurs;
 
   if (isLoading && stagiaires.length === 0 && secteurs.length === 0) {
     return (
-      <div className="container py-5 text-center">
-        <div className="spinner-border text-dark" role="status" />
-        <p className="mt-3 text-muted">Chargement…</p>
+      <div className="container-xxl px-4 py-5 text-center">
+        <div className="spinner-border" style={{ color: "var(--color-primary)" }} role="status" />
+        <p className="mt-3 body-sm">Chargement…</p>
       </div>
     );
   }
 
   return (
-    <div className="container py-4">
+    <div className="container-xxl px-4 py-5">
 
-      {/* ── Header + breadcrumb ── */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* ── Page header ── */}
+      <div className="d-flex justify-content-between align-items-start mb-5">
         <div>
-          <h2 className="fw-bold mb-1">
-            <i className="bi bi-people-fill me-3 text-dark-navy"></i>
-            Gestion des Stagiaires
-          </h2>
+          <div className="d-flex align-items-center gap-3 mb-2">
+            <div className="page-icon-wrap">
+              <i className="bi bi-people-fill"></i>
+            </div>
+            <h1 className="page-title mb-0">Gestion des Stagiaires</h1>
+          </div>
+          {/* Breadcrumb */}
           <nav aria-label="breadcrumb">
             <ol className="breadcrumb mb-0 small">
               <li
@@ -107,12 +112,10 @@ function StagiairesPage() {
             </ol>
           </nav>
         </div>
+
         {user?.role === "admin" && !showForm && selectedProgramme && (
-          <button
-            className="btn btn-dark-navy rounded-pill px-4 py-2 fw-bold d-flex align-items-center"
-            onClick={handleAddNew}
-          >
-            <i className="bi bi-plus-lg me-2 fs-5"></i>
+          <button className="btn-navy d-flex align-items-center gap-2" onClick={handleAddNew}>
+            <i className="bi bi-plus-lg"></i>
             Nouveau Stagiaire
           </button>
         )}
@@ -138,22 +141,22 @@ function StagiairesPage() {
           onBack={() => setSelectedProgramme(null)}
         />
 
-      /* ── Level 2: programmes of selected secteur ── */
+      /* ── Level 2: programmes ── */
       ) : selectedSecteur ? (
         <div>
           <button
-            className="btn btn-sm btn-outline-dark-navy rounded-pill mb-4 px-3"
+            className="btn-navy-outline d-inline-flex align-items-center gap-2 mb-5"
             onClick={() => setSelectedSecteur(null)}
           >
-            <i className="bi bi-arrow-left me-1"></i> Retour aux secteurs
+            <i className="bi bi-arrow-left"></i> Retour aux secteurs
           </button>
 
           {loadingProgrammes ? (
             <div className="text-center py-5">
-              <div className="spinner-border text-dark" role="status" />
+              <div className="spinner-border" style={{ color: "var(--color-primary)" }} role="status" />
             </div>
           ) : currentProgrammes.length === 0 ? (
-            <div className="text-center py-5 text-muted">
+            <div className="text-center py-5 body-sm">
               <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
               Aucune filière dans ce secteur.
             </div>
@@ -162,17 +165,14 @@ function StagiairesPage() {
               {currentProgrammes.map((p) => (
                 <div key={p.id} className="col-md-4 col-lg-3">
                   <div
-                    className="card h-100 border-0 shadow-sm prog-card"
+                    className="card-premium card-clickable prog-card text-center p-4"
                     onClick={() => setSelectedProgramme(p.code_diplome)}
-                    style={{ cursor: "pointer" }}
                   >
-                    <div className="card-body text-center p-4">
-                      <div className="bg-soft-dark-navy text-dark-navy p-3 rounded-circle d-inline-flex mb-3">
-                        <i className="bi bi-mortarboard fs-3"></i>
-                      </div>
-                      <h5 className="fw-bold mb-1">{p.code_diplome}</h5>
-                      <p className="text-muted small mb-0">{p.inscriptions_count || 0} Stagiaires</p>
+                    <div className="prog-icon-wrap mb-3">
+                      <i className="bi bi-mortarboard fs-3"></i>
                     </div>
+                    <div className="section-title mb-1">{p.code_diplome}</div>
+                    <div className="body-sm">{p.inscriptions_count || 0} Stagiaires</div>
                   </div>
                 </div>
               ))}
@@ -184,25 +184,28 @@ function StagiairesPage() {
       ) : (
         <div className="row g-4">
           {secteurs.length === 0 ? (
-            <div className="col-12 text-center py-5 text-muted">
+            <div className="col-12 text-center py-5 body-sm">
               <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
               Aucun secteur enregistré.
             </div>
           ) : secteurs.map((sec) => {
-            const icon = SECTEUR_ICONS[sec.code] || defaultIcon;
+            const icon  = SECTEUR_ICONS[sec.code]  || defaultIcon;
+            const color = SECTEUR_COLORS[sec.code] || defaultColor;
             return (
               <div key={sec.id} className="col-md-4 col-lg-3">
                 <div
-                  className="card h-100 border-0 shadow-sm secteur-card"
+                  className="card-premium card-clickable secteur-card text-center p-4"
                   onClick={() => setSelectedSecteur(sec)}
-                  style={{ cursor: "pointer" }}
                 >
-                  <div className="card-body text-center p-4">
-                    <div className="secteur-icon-wrap mb-3">
-                      <i className={`bi ${icon} fs-2`}></i>
-                    </div>
-                    <h5 className="fw-bold mb-1">{sec.code}</h5>
-                    <p className="text-muted small mb-0">{sec.programmes_count} Classe{sec.programmes_count !== 1 ? "s" : ""}</p>
+                  <div
+                    className="secteur-icon-wrap mb-3"
+                    style={{ background: color.bg, color: color.color }}
+                  >
+                    <i className={`bi ${icon} fs-2`}></i>
+                  </div>
+                  <div className="section-title mb-1">{sec.code}</div>
+                  <div className="body-sm">
+                    {sec.programmes_count} Classe{sec.programmes_count !== 1 ? "s" : ""}
                   </div>
                 </div>
               </div>
@@ -211,23 +214,6 @@ function StagiairesPage() {
         </div>
       )}
 
-      <style>{`
-        .secteur-card:hover, .prog-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0,0,0,.07) !important;
-          border: 1px solid #0A121A !important;
-        }
-        .secteur-card, .prog-card { transition: all .2s ease-in-out; }
-        .secteur-icon-wrap { width:60px; height:60px; border-radius:50%; background:#e7f1ff; color:#0A121A; display:inline-flex; align-items:center; justify-content:center; }
-        .bg-soft-dark-navy   { background-color: #e7f1ff; }
-        .btn-dark-navy       { background-color: #0A121A; border-color: #0A121A; color: #fff; }
-        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
-        .text-dark-navy      { color: #0A121A; }
-        .btn-outline-dark-navy       { color: #0A121A; border-color: #0A121A; }
-        .btn-outline-dark-navy:hover { background-color: #0A121A; color: #fff; }
-        .bc-link { cursor: pointer; color: #0A121A; }
-        .bc-link:hover { text-decoration: underline; }
-      `}</style>
     </div>
   );
 }

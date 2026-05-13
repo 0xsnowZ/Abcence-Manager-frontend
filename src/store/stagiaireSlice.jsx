@@ -110,6 +110,7 @@ const stagiaireSlice = createSlice({
 
     // createStagiaire
     builder
+      .addCase(createStagiaire.pending, (state) => { state.error = null; })
       .addCase(createStagiaire.fulfilled, (state, action) => {
         state.items.push(action.payload);
       })
@@ -119,6 +120,7 @@ const stagiaireSlice = createSlice({
 
     // updateStagiaire
     builder
+      .addCase(updateStagiaire.pending, (state) => { state.error = null; })
       .addCase(updateStagiaire.fulfilled, (state, action) => {
         const idx = state.items.findIndex((s) => s.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;

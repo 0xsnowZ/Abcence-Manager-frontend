@@ -8,6 +8,8 @@ import SaisiePage from "./pages/SaisiePage.jsx";
 import ProfsPage from "./pages/ProfsPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import { ToastProvider } from "./components/ToastProvider.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 
 // Main App Layout for Protected Routes
 function AppLayout() {
@@ -47,19 +49,23 @@ function AppLayout() {
 // Main App Component with Router Setup
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </Router>
+    <ErrorBoundary>
+      <ToastProvider>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </Router>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

@@ -141,6 +141,7 @@ const absenceSlice = createSlice({
 
     // updateAttendance
     builder
+      .addCase(updateAttendance.pending, (state) => { state.error = null; })
       .addCase(updateAttendance.fulfilled, (state, action) => {
         const idx = state.items.findIndex((a) => a.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
@@ -151,6 +152,7 @@ const absenceSlice = createSlice({
 
     // deleteAttendance
     builder
+      .addCase(deleteAttendance.pending, (state) => { state.error = null; })
       .addCase(deleteAttendance.fulfilled, (state, action) => {
         state.items = state.items.filter((a) => a.id !== action.payload);
       })
