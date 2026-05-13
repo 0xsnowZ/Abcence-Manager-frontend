@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { HashRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import Navigation from "./components/Navigation.jsx";
@@ -14,11 +15,12 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 // Main App Layout for Protected Routes
 function AppLayout() {
   const { user } = useSelector(state => state.auth);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="min-vh-100 bg-light d-flex flex-column">
-      <Navigation />
-      <main className="flex-grow-1">
+    <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
+      <Navigation onCollapse={setCollapsed} />
+      <div className={collapsed ? "app-body app-body--collapsed" : "app-body"}>
         <Routes>
           <Route path="/" element={<StagiairesPage />} />
           <Route path="/absences" element={<AbsencesPage />} />
@@ -33,15 +35,7 @@ function AppLayout() {
           />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </main>
-      <footer className="bg-dark text-white text-center py-3 mt-auto">
-        <div className="container">
-          <small>
-            <i className="bi bi-calendar-check me-2"></i>
-            Gestion d'État des Absences - Projet React Redux
-          </small>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }

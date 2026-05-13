@@ -352,8 +352,12 @@ body {
 .professional-grid th, .professional-grid td { border: 1px solid var(--color-border) !important; }
 .professional-grid thead tr:first-child th { border-bottom: 1px solid var(--color-border) !important; }
 .professional-grid thead th { background: var(--color-bg); }
-.date-group-start { border-left: 2px solid var(--color-border-strong) !important; }
-.border-end-heavy { border-right: 2px solid var(--color-border-strong) !important; }
+.date-group-start,
+.professional-grid th.date-group-start,
+.professional-grid td.date-group-start { border-left: 2px solid var(--color-border-strong) !important; }
+.border-end-heavy,
+.professional-grid th.border-end-heavy,
+.professional-grid td.border-end-heavy { border-right: 2px solid var(--color-border-strong) !important; }
 .sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
 .professional-grid .cell-slot { cursor: pointer; transition: background 0.15s; position: relative; }
 .professional-grid .cell-slot:hover { background: #f1f5ff; }
@@ -416,6 +420,69 @@ body {
 /* react-calendar compact variant */
 .x-small-calendar { font-size: 0.75rem !important; }
 .x-small-calendar .react-calendar__tile { padding: 0.5em 0.2em !important; }
+
+/* ─── Mobile (≤767px) ───────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  /* Sticky name columns: shrink from 220–240px to free up grid space */
+  .sticky-col,
+  .cal-sticky-col {
+    width: 110px !important;
+    min-width: 110px !important;
+    font-size: 0.75rem;
+    padding-left: 0.5rem !important;
+  }
+
+  /* Calendar / date-picker popups: constrain to viewport width */
+  .date-picker-dropdown {
+    min-width: 0 !important;
+    width: calc(100vw - 2rem) !important;
+    left: 0 !important;
+    right: auto !important;
+  }
+
+  /* Action buttons: increase tap target */
+  .btn-action-round {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Toast stack: keep within viewport with even side margins */
+  .toast-stack {
+    right: 1rem !important;
+    left: 1rem !important;
+    max-width: calc(100vw - 2rem) !important;
+  }
+
+  /* Breadcrumb links: larger tap area */
+  .bc-link {
+    padding: 0.25rem 0.4rem;
+    border-radius: var(--radius-sm);
+    display: inline-block;
+  }
+
+  /* Nav logout button: taller tap target */
+  .nav-logout-btn {
+    padding: 0.5rem 0.875rem !important;
+    min-height: 40px;
+  }
+}
+
+/* ── App Layout (sidebar + content) ─────────────────────────────────────── */
+.app-body {
+  margin-left: 260px;
+  padding-top: 60px; /* height of .app-topbar */
+  min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+.app-body--collapsed {
+  margin-left: 72px;
+}
+@media (max-width: 767px) {
+  .app-body,
+  .app-body--collapsed {
+    margin-left: 0 !important;
+  }
+}
 
 /* Retained for backward compat with existing components */
 .bg-dark-navy       { background-color: var(--color-primary) !important; }

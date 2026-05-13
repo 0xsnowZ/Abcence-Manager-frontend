@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   fetchProfs,
@@ -388,6 +388,7 @@ function ProfsPage() {
                   </p>
                 </div>
               ) : (
+                <div className="table-responsive scroll-thin">
                 <table className="table align-middle table-hover mb-0">
                   <thead className="bg-light text-muted small text-uppercase fw-bold">
                     <tr>
@@ -466,6 +467,7 @@ function ProfsPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               )}
             </div>
           </div>

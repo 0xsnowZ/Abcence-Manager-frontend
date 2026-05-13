@@ -145,7 +145,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
 
           {/* Date (read-only when editing) */}
           <div className="row g-4 mb-4">
-            <div className="col-md-7">
+            <div className="col-12 col-md-7">
               <label className="form-label label-caps">
                 Date Relevée
               </label>
@@ -166,7 +166,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
                 <div className="text-danger small mt-1">{errors.date}</div>
               )}
             </div>
-            <div className="col-md-5">
+            <div className="col-12 col-md-5">
               <label className="form-label label-caps">
                 Heures Manquées
               </label>

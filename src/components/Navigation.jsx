@@ -1,24 +1,36 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logoutUser } from "../store/authSlice.jsx";
+import ofpptLogo from "../assets/ofppt-logo.png";
 
-function Navigation() {
+function Navigation({ onCollapse }) {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const [collapsed, setCollapsed]   = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate("/login");
   };
 
+  const toggleCollapse = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    onCollapse?.(next);
+  };
+
   const tabs = [
-    { id: "stagiaires", label: "Stagiaires",   icon: "bi-people-fill",      path: "/" },
-    { id: "absences",   label: "Absences",     icon: "bi-calendar-x-fill",  path: "/absences" },
-    { id: "saisie",     label: "Registre",     icon: "bi-pencil-square",    path: "/saisie" },
+    { id: "stagiaires", label: "Stagiaires",   icon: "bi-people-fill",     path: "/" },
+    { id: "absences",   label: "Absences",     icon: "bi-calendar-x-fill", path: "/absences" },
+    { id: "saisie",     label: "Registre",     icon: "bi-pencil-square",   path: "/saisie" },
     ...(user?.role === "admin" ? [
-      { id: "profs",      label: "Professeurs",  icon: "bi-person-gear",      path: "/profs" },
-      { id: "statistics", label: "Statistiques", icon: "bi-graph-up-arrow",   path: "/statistiques" },
+      { id: "profs",      label: "Professeurs",  icon: "bi-person-gear",     path: "/profs" },
+      { id: "statistics", label: "Statistiques", icon: "bi-graph-up-arrow",  path: "/statistiques" },
     ] : []),
   ];
 
@@ -26,218 +38,408 @@ function Navigation() {
     ? (user?.programmes || []).map((p) => p.code_diplome || p.code || p)
     : [];
 
-  const initials = (user?.name || user?.nom || "U").charAt(0).toUpperCase();
-  const displayName = user?.name || user?.nom || "";
+  const initials     = (user?.name || user?.nom || "U").charAt(0).toUpperCase();
+  const displayName  = user?.name || user?.nom || "";
+  const currentLabel = tabs.find((t) => t.path === location.pathname)?.label || "Tableau de bord";
 
   return (
-    <nav className="app-nav navbar navbar-expand-lg navbar-dark mb-0 py-0">
-      <div className="container-xxl px-4">
+    <>
+      {/* ── Sidebar ── */}
+      <aside className={`app-sidebar${collapsed ? " app-sidebar--collapsed" : ""}${mobileOpen ? " app-sidebar--open" : ""}`}>
 
-        {/* Brand */}
-        <NavLink className="navbar-brand d-flex align-items-center gap-3 py-3" to="/">
-          <div className="nav-brand-icon">
-            <i className="bi bi-calendar-check-fill"></i>
-          </div>
-          <div className="nav-brand-text">
-            <div className="nav-brand-name">Gestion des Absences</div>
-            <div className="nav-brand-sub">Tableau de bord</div>
-          </div>
-        </NavLink>
-
-        <button
-          className="navbar-toggler border-0 shadow-none"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-
-        <div className="collapse navbar-collapse" id="navbarNav">
-          {/* Nav links */}
-          <ul className="navbar-nav mx-auto gap-1 mt-3 mt-lg-0 align-items-lg-center">
-            {tabs.map((tab) => (
-              <li className="nav-item" key={tab.id}>
-                <NavLink
-                  to={tab.path}
-                  end={tab.path === "/"}
-                  className={({ isActive }) =>
-                    `nav-tab d-flex align-items-center gap-2 px-3 py-2 rounded${isActive ? " nav-tab--active" : ""}`
-                  }
-                >
-                  <i className={`bi ${tab.icon}`}></i>
-                  <span>{tab.label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-
-          {/* User section */}
-          {user && (
-            <div className="d-flex align-items-center gap-3 mt-3 mt-lg-0 ps-lg-4 nav-user-section">
-              <div className="d-flex align-items-center gap-2">
-                <div className="nav-avatar">
-                  {initials}
-                </div>
-                <div className="d-none d-xl-block lh-sm">
-                  <div className="nav-user-name">{displayName}</div>
-                  <div className="d-flex align-items-center gap-1 flex-wrap">
-                    <span className="nav-user-role">{user.role}</span>
-                    {profFilieres.map((f) => (
-                      <span key={f} className="nav-prof-badge">{f}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="nav-logout-btn"
-                title="Déconnexion"
-              >
-                <i className="bi bi-box-arrow-right"></i>
-                <span className="d-lg-none d-xl-inline ms-1">Quitter</span>
-              </button>
+        {/* Logo */}
+        <div className="sidebar-logo">
+          <img src={ofpptLogo} alt="OFPPT" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
+          {!collapsed && (
+            <div className="sidebar-logo-text">
+              <div className="sidebar-brand-name">AbsenceApp</div>
+              <div className="sidebar-brand-sub">Tableau de bord</div>
             </div>
           )}
         </div>
-      </div>
+
+        {/* Nav links */}
+        <nav className="sidebar-nav">
+          {!collapsed && (
+            <p className="sidebar-section-label">MENU PRINCIPAL</p>
+          )}
+          {tabs.map((tab) => {
+            const isActive = tab.path === "/"
+              ? location.pathname === "/"
+              : location.pathname.startsWith(tab.path);
+            return (
+              <NavLink
+                key={tab.id}
+                to={tab.path}
+                end={tab.path === "/"}
+                title={collapsed ? tab.label : undefined}
+                onClick={() => setMobileOpen(false)}
+                className={`sidebar-link${isActive ? " sidebar-link--active" : ""}`}
+              >
+                <i className={`bi ${tab.icon} sidebar-link-icon`}></i>
+                {!collapsed && <span className="sidebar-link-label">{tab.label}</span>}
+              </NavLink>
+            );
+          })}
+        </nav>
+
+        {/* Footer – user info + logout */}
+        <div className="sidebar-footer">
+          <div className="sidebar-user">
+            <div className="sidebar-avatar">{initials}</div>
+            {!collapsed && (
+              <div className="sidebar-user-info">
+                <div className="sidebar-user-name">{displayName}</div>
+                <div className="d-flex align-items-center gap-1 flex-wrap">
+                  <span className="sidebar-user-role">{user?.role}</span>
+                  {profFilieres.map((f) => (
+                    <span key={f} className="sidebar-badge">{f}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          {!collapsed && (
+            <button className="sidebar-logout" onClick={handleLogout} title="Déconnexion">
+              <i className="bi bi-box-arrow-right"></i>
+            </button>
+          )}
+        </div>
+
+        {/* Collapse toggle */}
+        <button
+          className="sidebar-collapse-btn d-none d-md-flex"
+          onClick={toggleCollapse}
+          title={collapsed ? "Développer" : "Réduire"}
+        >
+          <i className={`bi bi-chevron-${collapsed ? "right" : "left"}`}></i>
+        </button>
+      </aside>
+
+      {/* ── Mobile overlay ── */}
+      {mobileOpen && (
+        <div className="sidebar-overlay d-md-none" onClick={() => setMobileOpen(false)} />
+      )}
+
+      {/* ── Top header bar ── */}
+      <header className={`app-topbar${collapsed ? " app-topbar--collapsed" : ""}`}>
+        {/* Hamburger (mobile only) */}
+        <button
+          className="topbar-hamburger d-flex d-md-none"
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Menu"
+        >
+          <i className={`bi bi-${mobileOpen ? "x-lg" : "list"}`}></i>
+        </button>
+
+        {/* Page title */}
+        <span className="topbar-title">{currentLabel}</span>
+
+        {/* Logout */}
+        <div className="topbar-actions">
+          <button className="topbar-logout-btn" onClick={handleLogout} title="Déconnexion">
+            <i className="bi bi-box-arrow-right"></i>
+            <span className="d-none d-sm-inline ms-1">Déconnexion</span>
+          </button>
+        </div>
+      </header>
 
       <style>{`
-        /* Bar */
-        .app-nav {
-          background: rgba(10, 18, 26, 0.96);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border-bottom: 1px solid rgba(255,255,255,0.07);
-          position: sticky;
+        /* ── Sidebar ── */
+        .app-sidebar {
+          position: fixed;
           top: 0;
-          z-index: 1030;
+          bottom: 0;
+          left: 0;
+          width: 260px;
+          background: #0A121A;
+          display: flex;
+          flex-direction: column;
+          z-index: 1040;
+          transition: width 0.3s ease, transform 0.3s ease;
+        }
+        .app-sidebar--collapsed { width: 72px; }
+
+        /* Mobile: hidden off-screen by default */
+        @media (max-width: 767px) {
+          .app-sidebar {
+            transform: translateX(-100%);
+            width: 260px !important;
+          }
+          .app-sidebar--open { transform: translateX(0); }
         }
 
-        /* Brand */
-        .nav-brand-icon {
-          width: 38px; height: 38px;
-          background: rgba(59,130,246,0.18);
-          border: 1px solid rgba(59,130,246,0.35);
+        /* Logo */
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          height: 64px;
+          padding: 0 18px;
+          gap: 12px;
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .app-sidebar--collapsed .sidebar-logo { justify-content: center; padding: 0; }
+        .sidebar-logo-icon {
+          width: 36px; height: 36px;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
           border-radius: 10px;
           display: flex; align-items: center; justify-content: center;
-          color: #60a5fa;
-          font-size: 1rem;
           flex-shrink: 0;
         }
-        .nav-brand-name {
-          font-size: 0.9rem;
+        .sidebar-brand-name {
+          font-size: 0.88rem;
           font-weight: 700;
           color: #fff;
           letter-spacing: -0.01em;
           line-height: 1.2;
+          white-space: nowrap;
         }
-        .nav-brand-sub {
-          font-size: 0.65rem;
-          color: rgba(255,255,255,0.45);
+        .sidebar-brand-sub {
+          font-size: 0.62rem;
+          color: rgba(255,255,255,0.38);
           font-weight: 400;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.05em;
           text-transform: uppercase;
         }
 
-        /* Tabs */
-        .nav-tab {
-          font-size: 0.85rem;
-          font-weight: 500;
-          color: rgba(255,255,255,0.6);
+        /* Nav */
+        .sidebar-nav {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 16px 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          scrollbar-width: none;
+        }
+        .sidebar-nav::-webkit-scrollbar { display: none; }
+        .sidebar-section-label {
+          font-size: 0.65rem;
+          font-weight: 600;
+          letter-spacing: 0.1em;
+          color: rgba(255,255,255,0.3);
+          padding: 0 8px;
+          margin: 0 0 8px;
+        }
+        .sidebar-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          border-radius: 10px;
           text-decoration: none;
-          border-radius: 8px;
-          transition: color 0.15s, background 0.15s;
+          color: rgba(255,255,255,0.55);
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: background 0.15s, color 0.15s, border-color 0.15s;
+          border-left: 3px solid transparent;
+          white-space: nowrap;
           position: relative;
         }
-        .nav-tab:hover {
+        .sidebar-link:hover {
+          background: rgba(255,255,255,0.07);
           color: #fff;
-          background: rgba(255,255,255,0.08);
         }
-        .nav-tab--active {
-          color: #fff !important;
-          background: rgba(59,130,246,0.15) !important;
+        .sidebar-link--active {
+          background: rgba(99,102,241,0.18) !important;
+          color: #a5b4fc !important;
+          border-left-color: #6366f1 !important;
           font-weight: 600;
         }
-        .nav-tab--active::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 24px;
-          height: 2px;
-          background: #3b82f6;
-          border-radius: 2px;
+        .app-sidebar--collapsed .sidebar-link {
+          justify-content: center;
+          padding: 10px 0;
+          border-left-color: transparent;
         }
-
-        /* User section divider */
-        .nav-user-section {
-          border-left: 1px solid rgba(255,255,255,0.1);
+        .app-sidebar--collapsed .sidebar-link--active {
+          border-left-color: transparent !important;
+          border-radius: 10px;
         }
+        .sidebar-link-icon { font-size: 1rem; flex-shrink: 0; }
 
-        /* Avatar */
-        .nav-avatar {
+        /* Footer */
+        .sidebar-footer {
+          border-top: 1px solid rgba(255,255,255,0.08);
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+          flex-shrink: 0;
+          overflow: hidden;
+        }
+        .app-sidebar--collapsed .sidebar-footer { justify-content: center; }
+        .sidebar-user {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+        .sidebar-avatar {
           width: 34px; height: 34px;
-          background: linear-gradient(135deg, #3b82f6, #1d4ed8);
           border-radius: 50%;
-          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          color: #fff;
           font-size: 0.8rem;
           font-weight: 700;
-          color: #fff;
+          display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
-          box-shadow: 0 0 0 2px rgba(59,130,246,0.3);
+          box-shadow: 0 0 0 2px rgba(99,102,241,0.35);
         }
-
-        .nav-user-name {
-          font-size: 0.85rem;
+        .sidebar-user-info { min-width: 0; }
+        .sidebar-user-name {
+          font-size: 0.84rem;
           font-weight: 600;
           color: #fff;
-          line-height: 1.2;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        .nav-user-role {
+        .sidebar-user-role {
           font-size: 0.62rem;
           font-weight: 600;
           letter-spacing: 0.07em;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.45);
+          color: rgba(255,255,255,0.4);
         }
-        .nav-prof-badge {
+        .sidebar-badge {
           font-size: 0.6rem;
           font-weight: 600;
-          padding: 1px 6px;
+          padding: 1px 5px;
           border-radius: 99px;
           background: rgba(245,158,11,0.2);
           color: #fbbf24;
           border: 1px solid rgba(245,158,11,0.3);
         }
-
-        /* Logout */
-        .nav-logout-btn {
+        .sidebar-logout {
           background: rgba(255,255,255,0.06);
-          border: 1px solid rgba(255,255,255,0.12);
-          color: rgba(255,255,255,0.7);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: rgba(255,255,255,0.6);
           border-radius: 8px;
-          padding: 0.35rem 0.75rem;
-          font-size: 0.8rem;
-          font-weight: 500;
+          width: 34px; height: 34px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 0.9rem;
           cursor: pointer;
+          flex-shrink: 0;
           transition: background 0.15s, color 0.15s, border-color 0.15s;
-          display: flex; align-items: center;
-          white-space: nowrap;
         }
-        .nav-logout-btn:hover {
+        .sidebar-logout:hover {
           background: rgba(239,68,68,0.15);
           border-color: rgba(239,68,68,0.3);
           color: #fca5a5;
         }
 
-        @media (max-width: 991px) {
-          .nav-user-section { border-left: none; padding-left: 0; }
-          .nav-tab--active::after { display: none; }
+        /* Collapse button */
+        .sidebar-collapse-btn {
+          position: absolute;
+          top: 80px;
+          right: -12px;
+          width: 24px; height: 24px;
+          border-radius: 50%;
+          background: #1e293b;
+          border: 2px solid var(--color-bg, #f1f5f9);
+          color: rgba(255,255,255,0.6);
+          font-size: 0.65rem;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: color 0.15s, background 0.15s;
+          z-index: 10;
+        }
+        .sidebar-collapse-btn:hover { color: #fff; background: #334155; }
+
+        /* Overlay */
+        .sidebar-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.5);
+          z-index: 1035;
+        }
+
+        /* ── Top header ── */
+        .app-topbar {
+          position: fixed;
+          top: 0;
+          left: 260px;
+          right: 0;
+          height: 60px;
+          background: rgba(255,255,255,0.97);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+          border-bottom: 1px solid var(--color-border, #e2e8f0);
+          display: flex;
+          align-items: center;
+          padding: 0 24px;
+          gap: 16px;
+          z-index: 1030;
+          transition: left 0.3s ease;
+        }
+        .app-topbar--collapsed { left: 72px; }
+        @media (max-width: 767px) {
+          .app-topbar { left: 0 !important; }
+        }
+
+        .topbar-hamburger {
+          background: none;
+          border: none;
+          color: var(--color-text-muted, #64748b);
+          font-size: 1.25rem;
+          padding: 6px;
+          border-radius: 8px;
+          cursor: pointer;
+          transition: background 0.15s;
+        }
+        .topbar-hamburger:hover { background: var(--color-bg, #f1f5f9); }
+
+        .topbar-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: var(--color-text, #0f172a);
+          flex: 1;
+        }
+
+        .topbar-actions {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .topbar-avatar {
+          width: 32px; height: 32px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          color: #fff;
+          font-size: 0.78rem;
+          font-weight: 700;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .topbar-user-name {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: var(--color-text, #0f172a);
+        }
+        .topbar-logout-btn {
+          display: flex;
+          align-items: center;
+          background: none;
+          border: 1px solid transparent;
+          color: #ef4444;
+          border-radius: 8px;
+          padding: 6px 12px;
+          font-size: 0.85rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s;
+          white-space: nowrap;
+        }
+        .topbar-logout-btn:hover {
+          background: rgba(239,68,68,0.08);
+          border-color: rgba(239,68,68,0.2);
         }
       `}</style>
-    </nav>
+    </>
   );
 }
 

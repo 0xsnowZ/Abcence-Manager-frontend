@@ -128,11 +128,11 @@ function AbsenceList({
           <table className="table align-middle mb-0 premium-table">
             <thead>
               <tr>
-                <th className="ps-4 py-3">ID</th>
+                <th className="ps-4 py-3 d-none d-sm-table-cell">ID</th>
                 <th className="py-3">Stagiaire</th>
-                <th className="py-3">Classe</th>
+                <th className="py-3 d-none d-md-table-cell">Classe</th>
                 <th className="py-3">Date</th>
-                <th className="py-3 text-center">Heures</th>
+                <th className="py-3 text-center d-none d-md-table-cell">Heures</th>
                 <th className="py-3 text-center">Statut</th>
                 <th className="py-3 text-end pe-4">Actions</th>
               </tr>
@@ -148,7 +148,7 @@ function AbsenceList({
               ) : (
                 currentAbsences.map((absence) => (
                   <tr key={absence.id} className="transition-all">
-                    <td className="ps-4 body-sm">#{absence.id}</td>
+                    <td className="ps-4 body-sm d-none d-sm-table-cell">#{absence.id}</td>
                     <td>
                       <div className="d-flex align-items-center">
                         <div className="avatar-circle avatar-md avatar-accent me-3">
@@ -159,7 +159,7 @@ function AbsenceList({
                         </span>
                       </div>
                     </td>
-                    <td>
+                    <td className="d-none d-md-table-cell">
                       <span className="badge rounded-pill bg-light text-dark px-3 py-1 border fw-normal">
                         {getStagiaireFiliere(absence.idstag)}
                       </span>
@@ -170,7 +170,7 @@ function AbsenceList({
                         {formatDate(absence.date)}
                       </span>
                     </td>
-                    <td className="text-center">
+                    <td className="text-center d-none d-md-table-cell">
                       <span className="badge bg-light text-dark fw-bold border rounded-pill px-3 py-1">
                         <i className="bi bi-clock me-1 text-dark-navy"></i>
                         {absence.heures || 2.5}h

@@ -37,6 +37,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={showToast}>
       {children}
       <div
+        className="toast-stack"
         style={{
           position: "fixed",
           bottom: "1.5rem",
@@ -45,7 +46,7 @@ export function ToastProvider({ children }) {
           display: "flex",
           flexDirection: "column",
           gap: "0.5rem",
-          maxWidth: "360px",
+          maxWidth: "min(360px, calc(100vw - 2rem))",
           width: "100%",
         }}
       >

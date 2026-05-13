@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useSelector } from "react-redux";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
@@ -145,7 +145,7 @@ function CalendarHistory() {
 
                 {showCalendar && (
                   <div
-                    className="position-absolute end-0 mt-2 bg-white p-3 border rounded shadow-lg"
+                    className="position-absolute end-0 mt-2 bg-white p-3 border rounded shadow-lg date-picker-dropdown"
                     style={{ minWidth: "350px", zIndex: 1050 }}
                   >
                     <div className="d-flex justify-content-between align-items-center mb-2 px-1">

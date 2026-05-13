@@ -51,9 +51,9 @@ function StagiaireList({ onEdit, filiere, onBack }) {
 
   return (
     <div className="card-premium overflow-hidden anim-fade-in">
-      <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
-        <div className="d-flex align-items-center">
-          <button className="btn-navy-outline d-inline-flex align-items-center gap-1 me-3 py-1 px-3" style={{ fontSize: "0.82rem" }} onClick={onBack}>
+      <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div className="d-flex align-items-center flex-wrap gap-2">
+          <button className="btn-navy-outline d-inline-flex align-items-center gap-1 me-2 py-1 px-3" style={{ fontSize: "0.82rem" }} onClick={onBack}>
             <i className="bi bi-arrow-left"></i>Retour
           </button>
           <h5 className="section-title mb-0 d-flex align-items-center gap-3">

@@ -84,19 +84,17 @@ function AbsencesPage() {
         </div>
       ) : (
         <>
-          <div className="row g-4 mb-5">
-            <div className="col-lg-3">
-              <Filters onFilterChange={handleFilterChange} />
-            </div>
-            <div className="col-lg-9">
-              <AbsenceList
-                onEdit={handleEdit}
-                filterType={filters.filterType}
-                dateRange={filters.dateRange}
-                stagiaireFilter={filters.stagiaireFilter}
-                filiereFilter={filters.filiereFilter}
-              />
-            </div>
+          <div className="mb-4">
+            <Filters onFilterChange={handleFilterChange} />
+          </div>
+          <div className="mb-4">
+            <AbsenceList
+              onEdit={handleEdit}
+              filterType={filters.filterType}
+              dateRange={filters.dateRange}
+              stagiaireFilter={filters.stagiaireFilter}
+              filiereFilter={filters.filiereFilter}
+            />
           </div>
           <CalendarHistory />
         </>

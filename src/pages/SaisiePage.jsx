@@ -83,19 +83,20 @@ function SaisiePage() {
     return (user?.programmes || []).map((p) => p.id);
   }, [isProf, user]);
 
-  // Date range: default = current week Monday–Saturday
-  const getCurrentWeek = () => {
+  const getDefaultRange = () => {
     const today = new Date();
-    const day = today.getDay(); // 0=Sun, 1=Mon, …, 6=Sat
+    today.setHours(0, 0, 0, 0);
+    if (window.innerWidth <= 767) {
+      return [today, today];
+    }
+    const day = today.getDay();
     const monday = new Date(today);
     monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
-    monday.setHours(0, 0, 0, 0);
     const saturday = new Date(monday);
     saturday.setDate(monday.getDate() + 5);
-    saturday.setHours(0, 0, 0, 0);
     return [monday, saturday];
   };
-  const [dateRange, setDateRange] = useState(getCurrentWeek);
+  const [dateRange, setDateRange] = useState(getDefaultRange);
   const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
   const [classeSearch, setClasseSearch] = useState("");
   const [classeDropdownOpen, setClasseDropdownOpen] = useState(false);
@@ -191,7 +192,7 @@ function SaisiePage() {
   const handleReset = () => {
     setSaisieData({});
     setSelectedProgrammeId("");
-    setDateRange(getCurrentWeek());
+    setDateRange(getDefaultRange());
   };
 
   // Warn user before leaving with unsaved attendance data
@@ -296,36 +297,26 @@ function SaisiePage() {
         </div>
       </div>
 
-      <div
-        className="card-premium mb-4"
-        style={{ position: "relative", zIndex: 9999 }}
-      >
-        <div className="card-header py-3 px-4">
-          <h6 className="mb-0 label-caps d-flex align-items-center gap-2">
+      <div className="card-premium mb-4" style={{ position: "relative", zIndex: 30 }}>
+        <div className="card-header py-3 px-4" style={{ background: "var(--color-primary)" }}>
+          <h6 className="mb-0 label-caps text-white d-flex align-items-center gap-2">
             <i className="bi bi-gear-fill"></i>Configuration du Registre
           </h6>
         </div>
-        <div className="card-body bg-light border-bottom">
-          <div className="row g-4 align-items-end">
-            {/* Programme / Filière select */}
-            <div className="col-lg-4">
-              <label className="form-label label-caps">
-                Classe / Filière
-              </label>
-              <div className="input-group input-group-lg">
-                <span className="input-group-text bg-white border-end-0">
-                  <i
-                    className={`bi ${
-                      lockedProgramme
-                        ? "bi-lock-fill text-warning"
-                        : "bi-mortarboard-fill text-dark-navy"
-                    }`}
-                  ></i>
+        <div className="card-body p-3">
+          <div className="row g-3 align-items-end">
+
+            {/* Classe / Filière */}
+            <div className="col-12 col-sm-6 col-lg">
+              <label className="form-label label-caps mb-1">Classe / Filière</label>
+              <div className="input-group input-group-sm">
+                <span className="input-group-text bg-light border-end-0">
+                  <i className={`bi ${lockedProgramme ? "bi-lock-fill text-warning" : "bi-mortarboard-fill text-dark-navy"}`}></i>
                 </span>
                 <div className="position-relative flex-grow-1">
                   <input
                     type="text"
-                    className="form-control border-start-0 rounded-start-0"
+                    className="form-control form-control-sm border-start-0 rounded-start-0 bg-light"
                     placeholder="Sélectionner une classe..."
                     value={
                       classeDropdownOpen
@@ -337,15 +328,9 @@ function SaisiePage() {
                     onChange={(e) => {
                       setClasseSearch(e.target.value);
                       setClasseDropdownOpen(true);
-                      if (!e.target.value) {
-                        setSelectedProgrammeId("");
-                        setSaisieData({});
-                      }
+                      if (!e.target.value) { setSelectedProgrammeId(""); setSaisieData({}); }
                     }}
-                    onFocus={() => {
-                      setClasseSearch("");
-                      setClasseDropdownOpen(true);
-                    }}
+                    onFocus={() => { setClasseSearch(""); setClasseDropdownOpen(true); }}
                     onBlur={() => setTimeout(() => setClasseDropdownOpen(false), 150)}
                     disabled={!!lockedProgramme}
                     autoComplete="off"
@@ -355,22 +340,14 @@ function SaisiePage() {
                       {availableProgrammes
                         .filter((p) => {
                           const q = classeSearch.toLowerCase();
-                          return (
-                            p.code_diplome.toLowerCase().includes(q) ||
-                            (p.libelle || "").toLowerCase().includes(q)
-                          );
+                          return p.code_diplome.toLowerCase().includes(q) || (p.libelle || "").toLowerCase().includes(q);
                         })
                         .map((p) => (
                           <li
                             key={p.id}
                             className="classe-dropdown-item px-3 py-2"
                             style={{ cursor: "pointer", fontSize: "0.9rem" }}
-                            onMouseDown={() => {
-                              setSelectedProgrammeId(String(p.id));
-                              setClasseSearch("");
-                              setClasseDropdownOpen(false);
-                              setSaisieData({});
-                            }}
+                            onMouseDown={() => { setSelectedProgrammeId(String(p.id)); setClasseSearch(""); setClasseDropdownOpen(false); setSaisieData({}); }}
                           >
                             <span className="fw-bold">{p.code_diplome}</span>
                             {p.libelle && <span className="text-muted ms-2" style={{ fontSize: "0.8rem" }}>— {p.libelle}</span>}
@@ -387,81 +364,55 @@ function SaisiePage() {
                 </div>
               </div>
               {lockedProgramme && (
-                <small
-                  className="text-muted d-block mt-1"
-                  style={{ fontSize: "0.72rem" }}
-                >
-                  <i className="bi bi-info-circle me-1"></i>
-                  Filière assignée par l'administrateur
+                <small className="text-muted d-block mt-1" style={{ fontSize: "0.72rem" }}>
+                  <i className="bi bi-info-circle me-1"></i>Filière assignée par l'administrateur
                 </small>
               )}
             </div>
 
-            {/* Date range picker */}
-            <div className="col-lg-5">
-              <label className="form-label label-caps">
-                Période d'appel
-              </label>
-              <div className="position-relative">
-                <button
-                  className="btn btn-white border btn-lg w-100 d-flex justify-content-between align-items-center shadow-sm"
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  type="button"
+            {/* Période d'appel */}
+            <div className="col-12 col-sm-6 col-lg position-relative">
+              <label className="form-label label-caps mb-1">Période d'appel</label>
+              <button
+                className="btn btn-white border bg-light btn-sm w-100 d-flex justify-content-between align-items-center shadow-none text-start py-2"
+                onClick={() => setShowCalendar(!showCalendar)}
+                type="button"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <span className="text-dark text-truncate">
+                  <i className="bi bi-calendar-range me-2 text-dark-navy"></i>
+                  {dateRange?.[0] ? dateRange[0].toLocaleDateString("fr-FR") : "Début"}
+                  <span className="mx-1 text-muted">➟</span>
+                  {dateRange?.[1] ? dateRange[1].toLocaleDateString("fr-FR") : "Fin"}
+                </span>
+                <i className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted ms-2`}></i>
+              </button>
+              {showCalendar && (
+                <div
+                  className="position-absolute start-0 mt-2 bg-white p-3 border rounded shadow-lg date-picker-dropdown"
+                  style={{ minWidth: "350px", zIndex: 1050 }}
                 >
-                  <span className="text-dark">
-                    <i className="bi bi-calendar-check-fill me-2 text-dark-navy"></i>
-                    {dateRange?.[0]
-                      ? dateRange[0].toLocaleDateString("fr-FR")
-                      : "Début"}
-                    <span className="mx-2 text-muted">➟</span>
-                    {dateRange?.[1]
-                      ? dateRange[1].toLocaleDateString("fr-FR")
-                      : "Fin"}
-                  </span>
-                  <i
-                    className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted`}
-                  ></i>
-                </button>
-
-                {showCalendar && (
-                  <div
-                    className="position-absolute start-0 mt-2 bg-white p-3 border rounded shadow-lg"
-                    style={{ minWidth: "350px", zIndex: 1050 }}
-                  >
-                    <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-                      <span className="fw-bold small text-muted">
-                        CHOISIR LA PLAGE
-                      </span>
-                      <button
-                        className="btn-close btn-sm"
-                        onClick={() => setShowCalendar(false)}
-                      ></button>
-                    </div>
-                    <Calendar
-                      onChange={(val) => {
-                        setDateRange(val);
-                        if (val && val.length === 2 && val[0] && val[1])
-                          setShowCalendar(false);
-                      }}
-                      selectRange={true}
-                      value={dateRange}
-                      className="border-0 w-100"
-                    />
+                  <div className="d-flex justify-content-between align-items-center mb-2 px-1">
+                    <span className="fw-bold small text-muted" style={{ fontSize: "0.7rem" }}>CHOISIR LA PLAGE</span>
+                    <button className="btn-close btn-sm" onClick={() => setShowCalendar(false)}></button>
                   </div>
-                )}
-              </div>
+                  <Calendar
+                    onChange={(val) => { setDateRange(val); if (val && val.length === 2 && val[0] && val[1]) setShowCalendar(false); }}
+                    selectRange={true}
+                    value={dateRange}
+                    className="border-0 w-100 x-small-calendar"
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Reset button */}
-            <div className="col-lg-3">
-              <button
-                className="btn btn-outline-secondary btn-lg w-100"
-                type="button"
-                onClick={handleReset}
-              >
-                <i className="bi bi-x-lg me-1"></i> Réinitialiser
+            {/* Reset */}
+            <div className="col-12 col-sm-auto">
+              <button className="btn btn-outline-secondary btn-sm fw-bold px-3" type="button" onClick={handleReset}>
+                <i className="bi bi-x-lg me-1"></i>Réinitialiser
               </button>
             </div>
+
           </div>
         </div>
       </div>

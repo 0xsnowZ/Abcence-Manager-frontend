@@ -85,54 +85,46 @@ function Filters({ onFilterChange }) {
           Filtrer les Résultats
         </h5>
       </div>
-      <div className="card-body p-4">
-        {/* Filter by Filière */}
-        <div className="mb-4">
-          <label className="form-label label-caps">Classe</label>
-          <select
-            className="form-select bg-light border-0"
-            value={filiereFilter}
-            onChange={(e) => {
-            setFiliereFilter(e.target.value);
-            setStagiaireFilter(""); // reset stagiaire when filière changes
-          }}
-          >
-            <option value="">Toutes les classes</option>
-            {filieres.map((f, index) => (
-              <option key={index} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="card-body p-3">
+        <div className="row g-3 align-items-end">
 
-        {/* Filter by Stagiaire */}
-        <div className="mb-4">
-          <label className="form-label label-caps">Stagiaire</label>
-          <select
-            className="form-select bg-light border-0"
-            value={stagiaireFilter}
-            onChange={(e) => setStagiaireFilter(e.target.value)}
-          >
-            <option value="">
-              {filiereFilter ? `Tous (${filteredStagiaires.length})` : "Tous les stagiaires"}
-            </option>
-            {filteredStagiaires.map((s) => {
-              const name = s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
-              const filiere = getStagiaireClasse(s);
-              return (
-                <option key={s.id} value={s.id}>
-                  {name}{!filiereFilter && filiere ? ` (${filiere})` : ""}
-                </option>
-              );
-            })}
-          </select>
-        </div>
+          {/* Classe */}
+          <div className="col-12 col-sm-6 col-lg">
+            <label className="form-label label-caps mb-1">Classe</label>
+            <select
+              className="form-select form-select-sm bg-light border-0"
+              value={filiereFilter}
+              onChange={(e) => { setFiliereFilter(e.target.value); setStagiaireFilter(""); }}
+            >
+              <option value="">Toutes les classes</option>
+              {filieres.map((f, i) => <option key={i} value={f}>{f}</option>)}
+            </select>
+          </div>
 
-        {/* Filter by Date Range */}
-        <div className="mb-4">
-          <label className="form-label label-caps">Période d'appel</label>
-          <div className="position-relative">
+          {/* Stagiaire */}
+          <div className="col-12 col-sm-6 col-lg">
+            <label className="form-label label-caps mb-1">Stagiaire</label>
+            <select
+              className="form-select form-select-sm bg-light border-0"
+              value={stagiaireFilter}
+              onChange={(e) => setStagiaireFilter(e.target.value)}
+            >
+              <option value="">{filiereFilter ? `Tous (${filteredStagiaires.length})` : "Tous les stagiaires"}</option>
+              {filteredStagiaires.map((s) => {
+                const name = s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
+                const filiere = getStagiaireClasse(s);
+                return (
+                  <option key={s.id} value={s.id}>
+                    {name}{!filiereFilter && filiere ? ` (${filiere})` : ""}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Période */}
+          <div className="col-12 col-sm-6 col-lg position-relative">
+            <label className="form-label label-caps mb-1">Période</label>
             <button
               className="btn btn-white border bg-light btn-sm w-100 d-flex justify-content-between align-items-center shadow-none text-start py-2"
               onClick={() => setShowCalendar(!showCalendar)}
@@ -147,18 +139,14 @@ function Filters({ onFilterChange }) {
               </span>
               <i className={`bi bi-chevron-${showCalendar ? 'up' : 'down'} text-muted ms-2`}></i>
             </button>
-
             {showCalendar && (
-              <div className="position-absolute start-0 mt-2 bg-white p-2 border rounded shadow-lg" style={{ minWidth: '300px', zIndex: 1050 }}>
+              <div className="position-absolute start-0 mt-2 bg-white p-2 border rounded shadow-lg date-picker-dropdown" style={{ minWidth: '300px', zIndex: 1050 }}>
                 <div className="d-flex justify-content-between align-items-center mb-2 px-1">
                   <span className="fw-bold small text-muted" style={{ fontSize: '0.7rem' }}>SÉLECTIONNER</span>
                   <button className="btn-close" style={{ fontSize: '0.6rem' }} onClick={() => setShowCalendar(false)}></button>
                 </div>
                 <Calendar
-                  onChange={(val) => {
-                    setDateRange(val);
-                    if (val && val.length === 2 && val[0] && val[1]) setShowCalendar(false);
-                  }}
+                  onChange={(val) => { setDateRange(val); if (val && val.length === 2 && val[0] && val[1]) setShowCalendar(false); }}
                   selectRange={true}
                   value={dateRange[0] ? dateRange : null}
                   className="border-0 w-100 x-small-calendar"
@@ -166,44 +154,42 @@ function Filters({ onFilterChange }) {
               </div>
             )}
           </div>
-        </div>
 
-        {/* Filter by Justification */}
-        <div className="mb-4">
-          <label className="form-label label-caps">Type d'absence</label>
-          <select
-            className="form-select bg-light border-0"
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="all">Toutes les absences</option>
-            <option value="justified">Justifiées uniquement</option>
-            <option value="unjustified">Non justifiées uniquement</option>
-          </select>
-        </div>
+          {/* Type */}
+          <div className="col-12 col-sm-6 col-lg">
+            <label className="form-label label-caps mb-1">Type</label>
+            <select
+              className="form-select form-select-sm bg-light border-0"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+            >
+              <option value="all">Toutes</option>
+              <option value="justified">Justifiées</option>
+              <option value="unjustified">Non justifiées</option>
+            </select>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="d-grid gap-2 mt-4">
-          <button className="btn btn-dark-navy rounded-pill fw-bold py-2 shadow-sm" onClick={applyFilters}>
-            <i className="bi bi-check2-circle me-2"></i>
-            Appliquer les filtres
-          </button>
-          <button className="btn btn-outline-secondary rounded-pill fw-bold py-2" onClick={clearFilters}>
-            Réinitialiser
-          </button>
+          {/* Buttons */}
+          <div className="col-12 col-sm-auto d-flex gap-2">
+            <button className="btn btn-dark-navy btn-sm fw-bold px-3" onClick={applyFilters}>
+              <i className="bi bi-check2-circle me-1"></i>Appliquer
+            </button>
+            <button className="btn btn-outline-secondary btn-sm fw-bold px-3" onClick={clearFilters}>
+              Réinitialiser
+            </button>
+          </div>
+
         </div>
 
         {/* Active Filters */}
         {activeFilters.length > 0 && (
-          <div className="mt-4 pt-3 border-top">
-            <small className="text-muted text-uppercase fw-bold" style={{ fontSize: '0.65rem' }}>Filtres actifs:</small>
-            <div className="d-flex flex-wrap gap-1 mt-2">
-              {activeFilters.map((filter, index) => (
-                <span key={index} className="badge rounded-pill bg-soft-primary text-primary px-3 border shadow-none" style={{ fontSize: '0.7rem' }}>
-                  {filter}
-                </span>
-              ))}
-            </div>
+          <div className="mt-3 pt-3 border-top d-flex flex-wrap gap-1 align-items-center">
+            <small className="text-muted text-uppercase fw-bold me-1" style={{ fontSize: '0.65rem' }}>Actifs:</small>
+            {activeFilters.map((filter, index) => (
+              <span key={index} className="badge rounded-pill bg-soft-primary text-primary px-3 border shadow-none" style={{ fontSize: '0.7rem' }}>
+                {filter}
+              </span>
+            ))}
           </div>
         )}
       </div>
