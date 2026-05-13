@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { deleteAbsence } from "../store/absenceSlice.jsx";
-
-// Absence List Component
+import { deleteAttendance, updateAttendance } from "../store/absenceSlice.jsx";
+import { fetchAttendances } from "../store/absenceSlice.jsx";
 
 function AbsenceList({
   onEdit,
@@ -12,101 +11,84 @@ function AbsenceList({
   filiereFilter = null,
 }) {
   const dispatch = useDispatch();
-  const absences = useSelector((state) => state.absences.items);
+  const rawAbsences = useSelector((state) => state.absences.items);
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const user = useSelector((state) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
 
+  // Normalize: backend attendance has stagiaire_id; frontend used idstag
+  const absences = rawAbsences.map((a) => ({
+    ...a,
+    idstag: a.stagiaire_id ?? a.idstag,
+    justifie: a.justifie ?? !!a.justification,
+    date: a.date ?? a.session?.date_session ?? "",
+    heures: a.heures ?? 2.5,
+  }));
+
   const getStagiaireName = (id) => {
-    const stagiaire = stagiaires.find((s) => s.id === id);
-    return stagiaire ? stagiaire.nom : "Inconnu";
+    const s = stagiaires.find((st) => st.id === id);
+    if (!s) return a?.stagiaireNom || "Inconnu";
+    return s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
   };
 
   const getStagiaireFiliere = (id) => {
-    const stagiaire = stagiaires.find((s) => s.id === id);
-    return stagiaire ? stagiaire.filiere : "-";
+    const s = stagiaires.find((st) => st.id === id);
+    return s ? s.filiere || s.programme_code || "-" : "-";
   };
 
   const filteredAbsences = absences
     .filter((absence) => {
-      // Filter by justification type
       if (filterType === "justified" && !absence.justifie) return false;
       if (filterType === "unjustified" && absence.justifie) return false;
 
-      // Filter by date range
-      if (
-        dateRange &&
-        dateRange.length === 2 &&
-        (dateRange[0] || dateRange[1])
-      ) {
+      if (dateRange && dateRange.length === 2 && (dateRange[0] || dateRange[1])) {
         const start = dateRange[0] ? new Date(dateRange[0]) : null;
         if (start) start.setHours(0, 0, 0, 0);
-
         const end = dateRange[1] ? new Date(dateRange[1]) : null;
         if (end) end.setHours(23, 59, 59, 999);
-
         const absDate = new Date(absence.date);
-
         if (start && absDate < start) return false;
         if (end && absDate > end) return false;
       }
 
-      if (stagiaireFilter && absence.idstag !== parseInt(stagiaireFilter))
-        return false;
+      if (stagiaireFilter && absence.idstag !== parseInt(stagiaireFilter)) return false;
 
-      // Filter by filière
       if (filiereFilter) {
-        const stagiaireFiliere = getStagiaireFiliere(absence.idstag);
-        if (stagiaireFiliere !== filiereFilter) return false;
+        if (getStagiaireFiliere(absence.idstag) !== filiereFilter) return false;
       }
 
-      // Filter by search term
       if (searchTerm) {
-        const stagiaireName = getStagiaireName(absence.idstag).toLowerCase();
-        return stagiaireName.includes(searchTerm.toLowerCase());
+        const name = getStagiaireName(absence.idstag).toLowerCase();
+        return name.includes(searchTerm.toLowerCase());
       }
 
       return true;
     })
     .sort((a, b) => {
-      // Sort by date descending
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      if (dateB - dateA !== 0) return dateB - dateA;
-      // If dates are same, sort by ID descending
-      return b.id - a.id;
+      const diff = new Date(b.date) - new Date(a.date);
+      return diff !== 0 ? diff : b.id - a.id;
     });
 
   const [currentPage, setCurrentPage] = useState(1);
   useEffect(() => {
     setCurrentPage(1);
-  }, [
-    searchTerm,
-    filterType,
-    dateRange,
-    stagiaireFilter,
-    filiereFilter,
-    absences.length,
-  ]);
+  }, [searchTerm, filterType, dateRange, stagiaireFilter, filiereFilter, absences.length]);
 
   const itemsPerPage = 8;
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentAbsences = filteredAbsences.slice(
-    indexOfFirstItem,
-    indexOfLastItem,
-  );
+  const currentAbsences = filteredAbsences.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredAbsences.length / itemsPerPage);
 
   const handleDelete = (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cette absence ?")) {
-      dispatch(deleteAbsence(id));
+      dispatch(deleteAttendance(id)).then(() => dispatch(fetchAttendances()));
     }
   };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("fr-FR");
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("fr-FR");
   };
 
   return (
@@ -170,7 +152,7 @@ function AbsenceList({
                           <i className="bi bi-person-fill"></i>
                         </div>
                         <span className="fw-bold text-dark">
-                          {getStagiaireName(absence.idstag)}
+                          {absence.stagiaireNom || getStagiaireName(absence.idstag)}
                         </span>
                       </div>
                     </td>
@@ -194,13 +176,11 @@ function AbsenceList({
                     <td className="text-center">
                       {absence.justifie ? (
                         <span className="badge rounded-pill bg-soft-success text-success px-3 py-1 border border-success">
-                          <i className="bi bi-check-circle-fill me-1"></i>
-                          Justifiée
+                          <i className="bi bi-check-circle-fill me-1"></i>Justifiée
                         </span>
                       ) : (
                         <span className="badge rounded-pill bg-soft-danger text-danger px-3 py-1 border border-danger">
-                          <i className="bi bi-x-circle-fill me-1"></i>
-                          Non justifiée
+                          <i className="bi bi-x-circle-fill me-1"></i>Non justifiée
                         </span>
                       )}
                     </td>
@@ -231,50 +211,39 @@ function AbsenceList({
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
             <span className="text-muted small">
               Affichage {indexOfFirstItem + 1}-
-              {Math.min(indexOfLastItem, filteredAbsences.length)} sur{" "}
-              {filteredAbsences.length}
+              {Math.min(indexOfLastItem, filteredAbsences.length)} sur {filteredAbsences.length}
             </span>
             <nav>
               <ul className="pagination pagination-sm mb-0 shadow-sm border rounded">
-                <li
-                  className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
-                >
+                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
                   <button
                     className="page-link border-0 text-dark"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(prev - 1, 1))
-                    }
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                   >
                     <i className="bi bi-chevron-left"></i>
                   </button>
                 </li>
-                {/* Dynamically generate page numbers to avoid huge lists if many pages */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(
                     (page) =>
-                      page === 1 ||
-                      page === totalPages ||
-                      Math.abs(page - currentPage) <= 1,
+                      page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1
                   )
                   .map((page, index, array) => (
                     <React.Fragment key={page}>
                       {index > 0 && array[index - 1] !== page - 1 && (
                         <li className="page-item disabled">
-                          <span className="page-link border-0 text-muted">
-                            ...
-                          </span>
+                          <span className="page-link border-0 text-muted">...</span>
                         </li>
                       )}
-                      <li
-                        className={`page-item ${currentPage === page ? "active" : ""}`}
-                      >
+                      <li className={`page-item ${currentPage === page ? "active" : ""}`}>
                         <button
-                          className={`page-link border-0 ${currentPage === page ? "bg-dark-navy text-white pointer-events-none" : "text-dark"}`}
+                          className={`page-link border-0 ${
+                            currentPage === page ? "bg-dark-navy text-white" : "text-dark"
+                          }`}
                           onClick={() => setCurrentPage(page)}
                         >
                           {page}
@@ -282,14 +251,10 @@ function AbsenceList({
                       </li>
                     </React.Fragment>
                   ))}
-                <li
-                  className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}
-                >
+                <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
                   <button
                     className="page-link border-0 text-dark"
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                    }
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
                   >
                     <i className="bi bi-chevron-right"></i>
                   </button>
@@ -300,12 +265,14 @@ function AbsenceList({
         )}
       </div>
       <style>{`
-        .bg-soft-primary { background-color: #e7f1ff; }
         .bg-soft-danger { background-color: #fceaea; }
         .bg-soft-success { background-color: #e6f9ed; }
+        .bg-soft-dark-navy { background-color: #e7f1ff; }
+        .bg-dark-navy { background-color: #0A121A; }
+        .text-dark-navy { color: #0A121A; }
         .avatar-circle { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
         .custom-table tbody tr { transition: all 0.2s; border-color: #f8f9fa; }
-        .custom-table tbody tr:hover { background-color: #fcfcfc; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .custom-table tbody tr:hover { background-color: #fcfcfc; }
         .btn-action-round { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
         .btn-edit { background-color: #fff; color: #0d6efd; border: 1px solid #e7f1ff; }
         .btn-edit:hover { background-color: #0d6efd; color: #fff; transform: scale(1.1); }

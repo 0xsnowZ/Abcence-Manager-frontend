@@ -1,22 +1,35 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { addProf, updateProf, deleteProf } from "../store/profSlice.jsx";
+import {
+  fetchProfs,
+  createProf,
+  updateProf,
+  deleteProf,
+} from "../store/profSlice.jsx";
+import { fetchProgrammes } from "../store/programmeSlice.jsx";
 
 // ── ProfForm ────────────────────────────────────────────────────────────────
-function ProfForm({ prof, onCancel, onSave, allFilieres }) {
+function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
   const [form, setForm] = useState(
     prof
-      ? { nom: prof.nom, email: prof.email, password: prof.password, filieres: prof.filieres || [] }
-      : { nom: "", email: "", password: "", filieres: [] }
+      ? {
+          name: prof.name || "",
+          email: prof.email || "",
+          password: "",
+          programme_ids: (prof.programmes || []).map((p) => p.id),
+        }
+      : { name: "", email: "", password: "", programme_ids: [] },
   );
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const validate = () => {
     const e = {};
-    if (!form.nom.trim()) e.nom = "Le nom est requis";
+    if (!form.name.trim()) e.name = "Le nom est requis";
     if (!form.email.trim()) e.email = "L'email est requis";
-    if (!prof && !form.password.trim()) e.password = "Le mot de passe est requis";
+    if (!prof && !form.password.trim())
+      e.password = "Le mot de passe est requis";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -27,19 +40,38 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
     if (errors[name]) setErrors((p) => ({ ...p, [name]: null }));
   };
 
-  const toggleFiliere = (f) => {
+  const toggleProgramme = (id) => {
     setForm((p) => ({
       ...p,
-      filieres: p.filieres.includes(f)
-        ? p.filieres.filter((x) => x !== f)
-        : [...p.filieres, f],
+      programme_ids: p.programme_ids.includes(id)
+        ? p.programme_ids.filter((x) => x !== id)
+        : [...p.programme_ids, id],
     }));
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    const payload = {
+      name: form.name,
+      email: form.email,
+      programme_ids: form.programme_ids,
+    };
+    if (form.password) payload.password = form.password;
+    if (prof) payload.id = prof.id;
+    await onSave(payload);
+    setSaving(false);
   };
 
   return (
     <div className="card border-0 shadow-lg overflow-hidden">
       {/* Accent bar */}
-      <div style={{ height: 4, background: "linear-gradient(90deg,#0A121A,#334155)" }} />
+      <div
+        style={{
+          height: 4,
+          background: "linear-gradient(90deg,#0A121A,#334155)",
+        }}
+      />
       <div className="card-header bg-white py-4 border-bottom-0">
         <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
           <span className="bg-dark-navy text-white p-2 rounded me-3 d-flex">
@@ -52,26 +84,32 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
       <div className="card-body p-4 bg-light border-top border-bottom">
         {/* Nom */}
         <div className="mb-3">
-          <label className="form-label fw-bold small text-muted text-uppercase">Nom complet</label>
+          <label className="form-label fw-bold small text-muted text-uppercase">
+            Nom complet
+          </label>
           <div className="input-group shadow-sm">
             <span className="input-group-text bg-white border-end-0">
               <i className="bi bi-person text-dark-navy"></i>
             </span>
             <input
               type="text"
-              className={`form-control border-start-0 ${errors.nom ? "is-invalid" : ""}`}
-              name="nom"
-              value={form.nom}
+              className={`form-control border-start-0 ${errors.name ? "is-invalid" : ""}`}
+              name="name"
+              value={form.name}
               onChange={handleChange}
               placeholder="Ex: Ahmed Alami"
             />
           </div>
-          {errors.nom && <div className="text-danger small mt-1">{errors.nom}</div>}
+          {errors.name && (
+            <div className="text-danger small mt-1">{errors.name}</div>
+          )}
         </div>
 
         {/* Email */}
         <div className="mb-3">
-          <label className="form-label fw-bold small text-muted text-uppercase">Adresse Email</label>
+          <label className="form-label fw-bold small text-muted text-uppercase">
+            Adresse Email
+          </label>
           <div className="input-group shadow-sm">
             <span className="input-group-text bg-white border-end-0">
               <i className="bi bi-envelope text-dark-navy"></i>
@@ -85,13 +123,20 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
               placeholder="prof@school.ma"
             />
           </div>
-          {errors.email && <div className="text-danger small mt-1">{errors.email}</div>}
+          {errors.email && (
+            <div className="text-danger small mt-1">{errors.email}</div>
+          )}
         </div>
 
         {/* Password */}
         <div className="mb-4">
           <label className="form-label fw-bold small text-muted text-uppercase">
-            Mot de passe {prof && <span className="text-muted fw-normal">(laisser vide pour ne pas changer)</span>}
+            Mot de passe{" "}
+            {prof && (
+              <span className="text-muted fw-normal">
+                (laisser vide pour ne pas changer)
+              </span>
+            )}
           </label>
           <div className="input-group shadow-sm">
             <span className="input-group-text bg-white border-end-0">
@@ -111,39 +156,45 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
               onClick={() => setShowPass((v) => !v)}
               tabIndex={-1}
             >
-              <i className={`bi ${showPass ? "bi-eye-slash" : "bi-eye"} text-muted`}></i>
+              <i
+                className={`bi ${showPass ? "bi-eye-slash" : "bi-eye"} text-muted`}
+              ></i>
             </button>
           </div>
-          {errors.password && <div className="text-danger small mt-1">{errors.password}</div>}
+          {errors.password && (
+            <div className="text-danger small mt-1">{errors.password}</div>
+          )}
         </div>
 
-        {/* Filières multi-select */}
+        {/* Programmes multi-select */}
         <div className="mb-4">
           <label className="form-label fw-bold small text-muted text-uppercase d-flex justify-content-between">
-            <span>Filières assignées</span>
-            {form.filieres.length > 0 && (
-              <span className="badge bg-dark-navy rounded-pill">{form.filieres.length} sélectionnée(s)</span>
+            <span>Filières / Programmes assignés</span>
+            {form.programme_ids.length > 0 && (
+              <span className="badge bg-dark-navy rounded-pill">
+                {form.programme_ids.length} sélectionné(s)
+              </span>
             )}
           </label>
-          {allFilieres.length === 0 ? (
-            <p className="text-muted small fst-italic">Aucune filière disponible (ajoutez des stagiaires d'abord).</p>
+          {allProgrammes.length === 0 ? (
+            <p className="text-muted small fst-italic">
+              Aucun programme disponible.
+            </p>
           ) : (
             <div className="d-flex flex-wrap gap-2">
-              {allFilieres.map((f) => {
-                const checked = form.filieres.includes(f);
+              {allProgrammes.map((p) => {
+                const checked = form.programme_ids.includes(p.id);
                 return (
                   <button
-                    key={f}
+                    key={p.id}
                     type="button"
-                    onClick={() => toggleFiliere(f)}
+                    onClick={() => toggleProgramme(p.id)}
                     className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
-                      checked
-                        ? "btn-dark-navy"
-                        : "btn-outline-secondary"
+                      checked ? "btn-dark-navy" : "btn-outline-secondary"
                     }`}
                   >
                     {checked && <i className="bi bi-check me-1"></i>}
-                    {f}
+                    {p.code_diplome}
                   </button>
                 );
               })}
@@ -153,7 +204,8 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
             <small className="text-muted">
               <i className="bi bi-info-circle me-1"></i>
               Le professeur ne verra que ces filières dans la page Saisie.
-              {form.filieres.length === 0 && " (Aucune restriction si vide)"}
+              {form.programme_ids.length === 0 &&
+                " (Aucune restriction si vide)"}
             </small>
           </div>
         </div>
@@ -162,20 +214,24 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
         <div className="d-flex gap-2 pt-3 border-top">
           <button
             className="btn btn-dark-navy rounded-pill px-4 fw-bold flex-grow-1"
-            onClick={() => {
-              if (!validate()) return;
-              const payload = { ...form };
-              if (prof && !payload.password) payload.password = prof.password;
-              if (prof) payload.id = prof.id;
-              onSave(payload);
-            }}
+            onClick={handleSave}
+            disabled={saving}
           >
-            <i className="bi bi-check2-all me-2"></i>
+            {saving ? (
+              <span
+                className="spinner-border spinner-border-sm me-2"
+                role="status"
+                aria-hidden="true"
+              ></span>
+            ) : (
+              <i className="bi bi-check2-all me-2"></i>
+            )}
             {prof ? "Enregistrer les modifications" : "Créer le Professeur"}
           </button>
           <button
             className="btn btn-outline-secondary rounded-pill px-4 fw-bold"
             onClick={onCancel}
+            disabled={saving}
           >
             Annuler
           </button>
@@ -188,35 +244,54 @@ function ProfForm({ prof, onCancel, onSave, allFilieres }) {
 // ── ProfsPage ────────────────────────────────────────────────────────────────
 function ProfsPage() {
   const dispatch = useDispatch();
-  const profs = useSelector((state) => state.profs.items);
-  const stagiaires = useSelector((state) => state.stagiaires.items);
+  const { items: profs, loading, error } = useSelector((state) => state.profs);
+  const { items: programmes } = useSelector((state) => state.programmes);
 
-  const allFilieres = useMemo(
-    () => [...new Set(stagiaires.map((s) => s.filiere))].sort(),
-    [stagiaires]
-  );
+  useEffect(() => {
+    dispatch(fetchProfs());
+    dispatch(fetchProgrammes());
+  }, [dispatch]);
 
   const [selectedProf, setSelectedProf] = useState(null); // null=hidden, false=new, obj=edit
   const [searchTerm, setSearchTerm] = useState("");
+  const [actionError, setActionError] = useState(null);
 
-  const filteredProfs = profs.filter(
-    (p) =>
-      p.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.email.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredProfs = useMemo(
+    () =>
+      profs.filter(
+        (p) =>
+          (p.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (p.email || "").toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
+    [profs, searchTerm],
   );
 
-  const handleSave = (payload) => {
-    if (selectedProf && selectedProf.id) {
-      dispatch(updateProf(payload));
+  const handleSave = async (payload) => {
+    setActionError(null);
+    let result;
+    if (payload.id) {
+      result = await dispatch(updateProf(payload));
     } else {
-      dispatch(addProf(payload));
+      result = await dispatch(createProf(payload));
     }
-    setSelectedProf(null);
+    if (result.error) {
+      setActionError(result.payload || "Une erreur est survenue.");
+    } else {
+      setSelectedProf(null);
+    }
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Supprimer ce professeur ? Il ne pourra plus se connecter.")) {
-      dispatch(deleteProf(id));
+  const handleDelete = async (id) => {
+    if (
+      window.confirm(
+        "Supprimer ce professeur ? Il ne pourra plus se connecter.",
+      )
+    ) {
+      setActionError(null);
+      const result = await dispatch(deleteProf(id));
+      if (result.error) {
+        setActionError(result.payload || "Erreur lors de la suppression.");
+      }
     }
   };
 
@@ -235,11 +310,30 @@ function ProfsPage() {
         </div>
         <button
           className="btn btn-dark-navy rounded-pill px-4 fw-bold shadow-sm"
-          onClick={() => setSelectedProf(false)}
+          onClick={() => {
+            setSelectedProf(false);
+            setActionError(null);
+          }}
         >
           <i className="bi bi-plus-lg me-2"></i>Ajouter un Professeur
         </button>
       </div>
+
+      {/* Global error alert */}
+      {actionError && (
+        <div
+          className="alert alert-danger alert-dismissible d-flex align-items-center mb-3 shadow-sm"
+          role="alert"
+        >
+          <i className="bi bi-exclamation-triangle-fill me-2"></i>
+          <div>{actionError}</div>
+          <button
+            type="button"
+            className="btn-close"
+            onClick={() => setActionError(null)}
+          ></button>
+        </div>
+      )}
 
       <div className="row g-4">
         {/* ── LEFT: List ── */}
@@ -253,7 +347,8 @@ function ProfsPage() {
                 Professeurs
               </h5>
               <span className="badge rounded-pill border text-dark px-3">
-                {filteredProfs.length} prof{filteredProfs.length !== 1 ? "s" : ""}
+                {filteredProfs.length} prof
+                {filteredProfs.length !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -275,11 +370,21 @@ function ProfsPage() {
             </div>
 
             <div className="card-body p-0">
-              {filteredProfs.length === 0 ? (
+              {loading ? (
+                <div className="text-center py-5 text-muted">
+                  <div
+                    className="spinner-border text-dark-navy mb-3"
+                    role="status"
+                  ></div>
+                  <p className="fw-medium">Chargement des professeurs…</p>
+                </div>
+              ) : filteredProfs.length === 0 ? (
                 <div className="text-center py-5 text-muted">
                   <i className="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
                   <p className="fw-medium">
-                    {searchTerm ? "Aucun résultat" : 'Aucun professeur. Cliquez sur "Ajouter un Professeur".'}
+                    {searchTerm
+                      ? "Aucun résultat"
+                      : 'Aucun professeur. Cliquez sur "Ajouter un Professeur".'}
                   </p>
                 </div>
               ) : (
@@ -292,61 +397,73 @@ function ProfsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProfs.map((p) => (
-                      <tr key={p.id} className="prof-row">
-                        <td className="ps-4">
-                          <div className="d-flex align-items-center">
-                            <div
-                              className="rounded-circle bg-dark-navy text-white d-flex align-items-center justify-content-center me-3 fw-bold flex-shrink-0"
-                              style={{ width: 38, height: 38, fontSize: 15 }}
-                            >
-                              {p.nom.charAt(0).toUpperCase()}
+                    {filteredProfs.map((p) => {
+                      const displayName = p.name || p.email || "—";
+                      const profProgrammes = p.programmes || [];
+                      return (
+                        <tr key={p.id} className="prof-row">
+                          <td className="ps-4">
+                            <div className="d-flex align-items-center">
+                              <div
+                                className="rounded-circle bg-dark-navy text-white d-flex align-items-center justify-content-center me-3 fw-bold flex-shrink-0"
+                                style={{ width: 38, height: 38, fontSize: 15 }}
+                              >
+                                {displayName.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="fw-bold text-dark">
+                                  {displayName}
+                                </div>
+                                <small className="text-muted">{p.email}</small>
+                              </div>
                             </div>
-                            <div>
-                              <div className="fw-bold text-dark">{p.nom}</div>
-                              <small className="text-muted">{p.email}</small>
+                          </td>
+                          <td>
+                            {profProgrammes.length > 0 ? (
+                              <div className="d-flex flex-wrap gap-1">
+                                {profProgrammes.map((prog) => (
+                                  <span
+                                    key={prog.id}
+                                    className="badge rounded-pill bg-dark-navy px-2"
+                                    style={{ fontSize: "0.7rem" }}
+                                  >
+                                    {prog.code_diplome}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span
+                                className="badge rounded-pill bg-light text-muted border"
+                                style={{ fontSize: "0.7rem" }}
+                              >
+                                Toutes (sans restriction)
+                              </span>
+                            )}
+                          </td>
+                          <td className="text-end pe-4">
+                            <div className="d-flex justify-content-end gap-2">
+                              <button
+                                className="btn-action-round btn-edit shadow-sm"
+                                title="Modifier"
+                                onClick={() => {
+                                  setSelectedProf(p);
+                                  setActionError(null);
+                                }}
+                              >
+                                <i className="bi bi-pencil-fill"></i>
+                              </button>
+                              <button
+                                className="btn-action-round btn-delete shadow-sm"
+                                title="Supprimer"
+                                onClick={() => handleDelete(p.id)}
+                              >
+                                <i className="bi bi-trash3-fill"></i>
+                              </button>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          {p.filieres && p.filieres.length > 0 ? (
-                            <div className="d-flex flex-wrap gap-1">
-                              {p.filieres.map((f) => (
-                                <span
-                                  key={f}
-                                  className="badge rounded-pill bg-dark-navy px-2"
-                                  style={{ fontSize: "0.7rem" }}
-                                >
-                                  {f}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="badge rounded-pill bg-light text-muted border" style={{ fontSize: "0.7rem" }}>
-                              Toutes (sans restriction)
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-end pe-4">
-                          <div className="d-flex justify-content-end gap-2">
-                            <button
-                              className="btn-action-round btn-edit shadow-sm"
-                              title="Modifier"
-                              onClick={() => setSelectedProf(p)}
-                            >
-                              <i className="bi bi-pencil-fill"></i>
-                            </button>
-                            <button
-                              className="btn-action-round btn-delete shadow-sm"
-                              title="Supprimer"
-                              onClick={() => handleDelete(p.id)}
-                            >
-                              <i className="bi bi-trash3-fill"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -359,7 +476,7 @@ function ProfsPage() {
           <div className="col-lg-5">
             <ProfForm
               prof={selectedProf || null}
-              allFilieres={allFilieres}
+              allProgrammes={programmes}
               onCancel={() => setSelectedProf(null)}
               onSave={handleSave}
             />

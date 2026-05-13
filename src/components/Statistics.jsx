@@ -1,33 +1,93 @@
-import React, { useState, useMemo } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useMemo } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchAttendances } from "../store/absenceSlice.jsx";
 
 // Statistics Component
-
 function Statistics() {
-  const absences = useSelector((state) => state.absences.items);
+  const dispatch = useDispatch();
+  const { items: absences, loading, error } = useSelector((state) => state.absences);
   const stagiaires = useSelector((state) => state.stagiaires.items);
 
-  // Calculate statistics
-  const totalAbsences = absences.length;
-  const totalHeures = absences.reduce((sum, a) => sum + (a.heures || 2.5), 0);
-  const justifiedAbsences = absences.filter((a) => a.justifie).length;
-  const unjustifiedAbsences = absences.filter((a) => !a.justifie).length;
-  const justifiedHeures = absences
-    .filter((a) => a.justifie)
-    .reduce((sum, a) => sum + (a.heures || 2.5), 0);
-  const unjustifiedHeures = absences
-    .filter((a) => !a.justifie)
-    .reduce((sum, a) => sum + (a.heures || 2.5), 0);
+  // Fetch attendances if not yet loaded
+  useEffect(() => {
+    if (absences.length === 0 && !loading) {
+      dispatch(fetchAttendances());
+    }
+  }, [dispatch, absences.length, loading]);
 
-  // Get most recent absences
-  const lastAbsences = [...absences]
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 5);
+  // ── Computed stats ──────────────────────────────────────────────────────────
+  const totalAbsences = absences.length;
+
+  // Backend stores hours via time_block (2.5h each); fall back to heures field
+  const getHours = (a) => a.heures ?? 2.5;
+
+  const totalHeures = useMemo(
+    () => absences.reduce((sum, a) => sum + getHours(a), 0),
+    [absences]
+  );
+
+  const justifiedAbsences = useMemo(
+    () => absences.filter((a) => a.justifie || a.justification),
+    [absences]
+  );
+
+  const unjustifiedAbsences = useMemo(
+    () => absences.filter((a) => !a.justifie && !a.justification),
+    [absences]
+  );
+
+  const justifiedCount = justifiedAbsences.length;
+  const unjustifiedCount = unjustifiedAbsences.length;
+
+  const justifiedHeures = useMemo(
+    () => justifiedAbsences.reduce((sum, a) => sum + getHours(a), 0),
+    [justifiedAbsences]
+  );
+
+  const unjustifiedHeures = useMemo(
+    () => unjustifiedAbsences.reduce((sum, a) => sum + getHours(a), 0),
+    [unjustifiedAbsences]
+  );
+
+  // Most recent 5 absences
+  const lastAbsences = useMemo(
+    () =>
+      [...absences]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5),
+    [absences]
+  );
 
   const getStagiaireInfo = (idstag) => {
-    const s = stagiaires.find((st) => st.id === idstag);
-    return s ? s : { nom: "Inconnu", filiere: "-" };
+    const s = stagiaires.find((st) => st.id === idstag || st.id === Number(idstag));
+    if (!s) return { nom: "Inconnu", filiere: "-" };
+    const nom =
+      s.nomComplet ||
+      `${s.prenom || ""} ${s.nom || ""}`.trim() ||
+      s.nom ||
+      "Inconnu";
+    const filiere = s.filiere || s.programme_code || "-";
+    return { nom, filiere };
   };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  if (loading && absences.length === 0) {
+    return (
+      <div className="text-center py-5 text-muted">
+        <div className="spinner-border text-dark-navy mb-3" role="status"></div>
+        <p className="fw-medium">Chargement des statistiques…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="alert alert-danger d-flex align-items-center shadow-sm" role="alert">
+        <i className="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="stats-container">
@@ -52,7 +112,7 @@ function Statistics() {
               </div>
               <div className="mt-2">
                 <span className="badge rounded-pill bg-light text-dark-navy border px-3 py-1 fw-bold">
-                  {totalHeures} heures totales
+                  {totalHeures}h totales
                 </span>
               </div>
             </div>
@@ -73,9 +133,7 @@ function Statistics() {
                   <h6 className="text-muted mb-0 small fw-bold text-uppercase tracking-wider">
                     Justifiées
                   </h6>
-                  <h3 className="fw-bold mb-0 mt-1 text-success">
-                    {justifiedAbsences}
-                  </h3>
+                  <h3 className="fw-bold mb-0 mt-1 text-success">{justifiedCount}</h3>
                 </div>
               </div>
               <div className="mt-2">
@@ -101,9 +159,7 @@ function Statistics() {
                   <h6 className="text-muted mb-0 small fw-bold text-uppercase tracking-wider">
                     Non Justifiées
                   </h6>
-                  <h3 className="fw-bold mb-0 mt-1 text-danger">
-                    {unjustifiedAbsences}
-                  </h3>
+                  <h3 className="fw-bold mb-0 mt-1 text-danger">{unjustifiedCount}</h3>
                 </div>
               </div>
               <div className="mt-2">
@@ -116,7 +172,7 @@ function Statistics() {
         </div>
       </div>
 
-      {/* Progress & Ranking Grid */}
+      {/* Progress & Recent absences */}
       <div className="row g-4 mb-5">
         <div className="col-lg-5">
           <div className="card border-0 shadow-sm h-100">
@@ -138,7 +194,7 @@ function Statistics() {
                         Taux de justification
                       </span>
                       <span className="badge bg-soft-success text-success rounded-pill px-3">
-                        {Math.round((justifiedAbsences / totalAbsences) * 100)}%
+                        {Math.round((justifiedCount / totalAbsences) * 100)}%
                       </span>
                     </div>
                     <div
@@ -148,9 +204,7 @@ function Statistics() {
                       <div
                         className="progress-bar bg-success rounded-pill"
                         role="progressbar"
-                        style={{
-                          width: `${(justifiedAbsences / totalAbsences) * 100}%`,
-                        }}
+                        style={{ width: `${(justifiedCount / totalAbsences) * 100}%` }}
                       ></div>
                     </div>
                   </div>
@@ -160,10 +214,7 @@ function Statistics() {
                         Taux d'irrégularité
                       </span>
                       <span className="badge bg-soft-danger text-danger rounded-pill px-3">
-                        {Math.round(
-                          (unjustifiedAbsences / totalAbsences) * 100,
-                        )}
-                        %
+                        {Math.round((unjustifiedCount / totalAbsences) * 100)}%
                       </span>
                     </div>
                     <div
@@ -173,9 +224,7 @@ function Statistics() {
                       <div
                         className="progress-bar bg-danger rounded-pill"
                         role="progressbar"
-                        style={{
-                          width: `${(unjustifiedAbsences / totalAbsences) * 100}%`,
-                        }}
+                        style={{ width: `${(unjustifiedCount / totalAbsences) * 100}%` }}
                       ></div>
                     </div>
                   </div>
@@ -198,7 +247,7 @@ function Statistics() {
                   className="bg-soft-danger text-danger rounded-circle me-3 d-flex align-items-center justify-content-center"
                   style={{ width: "48px", height: "48px", flexShrink: 0 }}
                 >
-                  <i className="bi bi-trophy-fill"></i>
+                  <i className="bi bi-clock-history"></i>
                 </div>
                 Dernières absences
               </h5>
@@ -222,10 +271,12 @@ function Statistics() {
                     </thead>
                     <tbody>
                       {lastAbsences.map((absence) => {
-                        const stag = getStagiaireInfo(absence.idstag);
-                        const date = new Date(absence.date).toLocaleDateString(
-                          "fr-FR",
-                        );
+                        const stag = getStagiaireInfo(absence.idstag || absence.stagiaire_id);
+                        // Use stagiaireNom from normalized data if available
+                        const displayName = absence.stagiaireNom || stag.nom;
+                        const filiere = absence.stagiaireFiliere || stag.filiere;
+                        const date = new Date(absence.date + "T00:00:00").toLocaleDateString("fr-FR");
+                        const isJustified = absence.justifie || !!absence.justification;
                         return (
                           <tr key={absence.id}>
                             <td className="ps-3 fw-medium text-muted">
@@ -234,17 +285,15 @@ function Statistics() {
                             </td>
                             <td>
                               <span className="fw-bold text-dark d-block mb-0">
-                                {stag.nom}
+                                {displayName}
                               </span>
-                              <small className="text-muted">
-                                {stag.filiere}
-                              </small>
+                              <small className="text-muted">{filiere}</small>
                             </td>
                             <td className="text-center fw-bold text-dark">
-                              {absence.heures || 2.5}h
+                              {getHours(absence)}h
                             </td>
                             <td className="text-center pe-3">
-                              {absence.justifie ? (
+                              {isJustified ? (
                                 <span className="badge rounded-pill bg-soft-success text-success px-3 py-1 border border-success">
                                   Justifiée
                                 </span>
@@ -266,8 +315,6 @@ function Statistics() {
         </div>
       </div>
 
-
-
       <style>{`
         .bg-dark-navy { background-color: #0A121A; }
         .text-dark-navy { color: #0A121A; }
@@ -281,15 +328,6 @@ function Statistics() {
         .custom-table tbody tr { border-color: #f8f9fa; }
         .custom-table tbody tr:last-child { border-bottom: none; }
         .card { border: 1px solid rgba(0,0,0,0.05) !important; }
-        .professional-grid { border-collapse: collapse; width: 100%; border: 1px solid #ced4da; }
-        .professional-grid th, .professional-grid td { border: 1px solid #adb5bd !important; }
-        .border-end-heavy { border-right: 3px solid #495057 !important; }
-        .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
-        .cell-slot { position: relative; vertical-align: middle; }
-        .is-absent { background-color: #fceaea !important; color: #dc3545; font-weight: bold; }
-        .is-justified { background-color: #e6f9ed !important; color: #198754; font-weight: bold; }
-        .hover-row:hover .sticky-col { background-color: #f8f9fa !important; }
-        .hover-row:hover td { background-color: rgba(0,0,0,0.01); }
       `}</style>
     </div>
   );

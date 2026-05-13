@@ -1,88 +1,105 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import api from "../services/api.js";
 
-// Initial state — only admin is hardcoded; profs are managed in profSlice
+// ─── Thunks ────────────────────────────────────────────────────────────────────
+
+/** POST /api/login */
+export const loginUser = createAsyncThunk(
+  "auth/loginUser",
+  async (credentials, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/login", credentials);
+      const { token, user } = response.data;
+      localStorage.setItem("sanctum_token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      return user;
+    } catch (err) {
+      const message =
+        err.response?.data?.errors?.email?.[0] ||
+        err.response?.data?.message ||
+        "Email ou mot de passe incorrect";
+      return rejectWithValue(message);
+    }
+  }
+);
+
+/** DELETE /api/logout */
+export const logoutUser = createAsyncThunk(
+  "auth/logoutUser",
+  async (_, { rejectWithValue }) => {
+    try {
+      await api.delete("/logout");
+    } catch (_err) {
+      // Ignore errors on logout — clear locally regardless
+    } finally {
+      localStorage.removeItem("sanctum_token");
+      localStorage.removeItem("user");
+    }
+  }
+);
+
+// ─── Initial state ─────────────────────────────────────────────────────────────
 const storedUser = localStorage.getItem("user");
 
 const initialState = {
   user: storedUser ? JSON.parse(storedUser) : null,
-  isAuthenticated: !!storedUser,
+  isAuthenticated: !!localStorage.getItem("sanctum_token"),
+  loading: false,
   error: null,
 };
 
-// Only the admin account is hardcoded
-const mockAdmins = [
-  {
-    id: "admin-1",
-    email: "admin@school.ma",
-    password: "password",
-    name: "Administrateur",
-    role: "admin",
-  },
-];
-
+// ─── Slice ─────────────────────────────────────────────────────────────────────
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    loginStart: (state) => {
-      state.error = null;
-    },
-    loginSuccess: (state, action) => {
-      state.user = action.payload;
-      state.isAuthenticated = true;
-      state.error = null;
-      localStorage.setItem("user", JSON.stringify(action.payload));
-    },
-    loginFailure: (state, action) => {
-      state.error = action.payload;
-      state.isAuthenticated = false;
-    },
-    logout: (state) => {
+    /** Synchronous logout (used by 401 interceptor redirect) */
+    clearAuth: (state) => {
       state.user = null;
       state.isAuthenticated = false;
+      state.error = null;
+      localStorage.removeItem("sanctum_token");
       localStorage.removeItem("user");
     },
   },
+  extraReducers: (builder) => {
+    // loginUser
+    builder
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+        state.isAuthenticated = false;
+      });
+
+    // logoutUser
+    builder
+      .addCase(logoutUser.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+        state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        // Still clear auth even if API call failed
+        state.loading = false;
+        state.user = null;
+        state.isAuthenticated = false;
+      });
+  },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout } =
-  authSlice.actions;
-
-// Thunk — checks admins first, then dynamic profs from profSlice
-export const loginUser = (credentials) => async (dispatch, getState) => {
-  dispatch(loginStart());
-
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // 1. Check hardcoded admins
-      const admin = mockAdmins.find(
-        (u) =>
-          u.email === credentials.email && u.password === credentials.password
-      );
-      if (admin) {
-        const { password, ...safe } = admin;
-        dispatch(loginSuccess(safe));
-        resolve();
-        return;
-      }
-
-      // 2. Check dynamic profs from Redux store
-      const profs = getState().profs.items;
-      const prof = profs.find(
-        (p) =>
-          p.email === credentials.email && p.password === credentials.password
-      );
-      if (prof) {
-        const { password, ...safe } = prof;
-        dispatch(loginSuccess({ ...safe, role: "prof" }));
-        resolve();
-        return;
-      }
-
-      dispatch(loginFailure("Email ou mot de passe incorrect"));
-      resolve();
-    }, 800);
-  });
-};
-
+export const { clearAuth } = authSlice.actions;
 export default authSlice.reducer;

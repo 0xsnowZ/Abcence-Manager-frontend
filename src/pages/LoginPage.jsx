@@ -9,11 +9,14 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { isAuthenticated, error } = useSelector((state) => state.auth);
+  const {
+    isAuthenticated,
+    error,
+    loading: isLoading,
+  } = useSelector((state) => state.auth);
 
   useEffect(() => {
     // Redirect if already logged in
@@ -24,12 +27,7 @@ function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    // Dispatch thunk -> waits for mock API -> updates state
-    await dispatch(loginUser({ email, password }));
-
-    setIsLoading(false);
+    dispatch(loginUser({ email, password }));
   };
 
   return (

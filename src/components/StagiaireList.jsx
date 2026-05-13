@@ -1,9 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { deleteStagiaire } from "../store/stagiaireSlice.jsx";
-import { deleteAbsence } from "../store/absenceSlice.jsx";
-
-// Stagiaire List Component
+import { deleteAttendance } from "../store/absenceSlice.jsx";
 
 function StagiaireList({ onEdit, filiere, onBack }) {
   const dispatch = useDispatch();
@@ -12,14 +10,20 @@ function StagiaireList({ onEdit, filiere, onBack }) {
   const user = useSelector((state) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const getAbsenceCount = (stagiaireId) => {
-    return absences.filter((a) => a.idstag === stagiaireId).length;
+  const getAbsenceCount = (stagiaireId) =>
+    absences.filter((a) => (a.stagiaire_id || a.idstag) === stagiaireId).length;
+
+  const getDisplayName = (s) => {
+    if (s.prenom && s.nom) return `${s.prenom} ${s.nom}`;
+    return s.nomComplet || s.nom || "—";
   };
 
   const filteredStagiaires = useMemo(() => {
     return stagiaires
-      .filter((s) => s.filiere === filiere)
-      .filter((s) => s.nom.toLowerCase().includes(searchTerm.toLowerCase()));
+      .filter((s) => (s.filiere || s.programme_code) === filiere)
+      .filter((s) =>
+        getDisplayName(s).toLowerCase().includes(searchTerm.toLowerCase())
+      );
   }, [stagiaires, filiere, searchTerm]);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,12 +37,13 @@ function StagiaireList({ onEdit, filiere, onBack }) {
   const currentStagiaires = filteredStagiaires.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredStagiaires.length / itemsPerPage);
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce stagiaire ?")) {
+      const related = absences.filter((a) => (a.stagiaire_id || a.idstag) === id);
+      for (const a of related) {
+        await dispatch(deleteAttendance(a.id));
+      }
       dispatch(deleteStagiaire(id));
-      // Also delete related absences
-      const relatedAbsences = absences.filter((a) => a.idstag === id);
-      relatedAbsences.forEach((a) => dispatch(deleteAbsence(a.id)));
     }
   };
 
@@ -46,12 +51,11 @@ function StagiaireList({ onEdit, filiere, onBack }) {
     <div className="card border-0 shadow-sm overflow-hidden anim-fade-in">
       <div className="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
         <div className="d-flex align-items-center">
-          <button 
+          <button
             className="btn btn-sm btn-outline-dark-navy rounded-pill me-3 px-3 d-flex align-items-center"
             onClick={onBack}
           >
-            <i className="bi bi-arrow-left me-1"></i>
-            Retour
+            <i className="bi bi-arrow-left me-1"></i>Retour
           </button>
           <h5 className="mb-0 fw-bold text-dark d-flex align-items-center">
             <span className="bg-dark-navy text-white p-2 rounded me-3 d-flex shadow-sm">
@@ -76,7 +80,7 @@ function StagiaireList({ onEdit, filiere, onBack }) {
               placeholder={`Rechercher un stagiaire dans ${filiere}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ boxShadow: 'none' }}
+              style={{ boxShadow: "none" }}
             />
           </div>
         </div>
@@ -106,10 +110,16 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                     <td className="ps-4 text-muted small">#{stagiaire.id}</td>
                     <td>
                       <div className="d-flex align-items-center">
-                        <div className={`avatar-circle me-3 shadow-sm ${stagiaire.sexe === "f" ? "bg-soft-danger text-danger" : "bg-soft-dark-navy text-dark-navy"}`}>
-                          {stagiaire.nom.charAt(0).toUpperCase()}
+                        <div
+                          className={`avatar-circle me-3 shadow-sm ${
+                            stagiaire.sexe === "f"
+                              ? "bg-soft-danger text-danger"
+                              : "bg-soft-dark-navy text-dark-navy"
+                          }`}
+                        >
+                          {getDisplayName(stagiaire).charAt(0).toUpperCase()}
                         </div>
-                        <span className="fw-bold text-dark">{stagiaire.nom}</span>
+                        <span className="fw-bold text-dark">{getDisplayName(stagiaire)}</span>
                       </div>
                     </td>
                     <td className="text-center">
@@ -125,14 +135,18 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                     </td>
                     <td className="text-center">
                       <span
-                        className={`badge rounded-pill px-3 py-1 ${getAbsenceCount(stagiaire.id) > 0 ? "bg-soft-warning text-warning border border-warning" : "bg-soft-success text-success border border-success"}`}
+                        className={`badge rounded-pill px-3 py-1 ${
+                          getAbsenceCount(stagiaire.id) > 0
+                            ? "bg-soft-warning text-warning border border-warning"
+                            : "bg-soft-success text-success border border-success"
+                        }`}
                       >
                         {getAbsenceCount(stagiaire.id)} séances
                       </span>
                     </td>
                     <td className="text-end pe-4">
                       <div className="d-flex justify-content-end gap-2">
-                        {user?.role === 'admin' && (
+                        {user?.role === "admin" && (
                           <button
                             className="btn-action-round btn-edit shadow-sm"
                             onClick={() => onEdit(stagiaire)}
@@ -141,7 +155,7 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                             <i className="bi bi-pencil-fill"></i>
                           </button>
                         )}
-                        {user?.role === 'admin' && (
+                        {user?.role === "admin" && (
                           <button
                             className="btn-action-round btn-delete shadow-sm"
                             onClick={() => handleDelete(stagiaire.id)}
@@ -159,31 +173,40 @@ function StagiaireList({ onEdit, filiere, onBack }) {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="d-flex justify-content-between align-items-center mt-4">
             <span className="text-muted small">
-              Affichage {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredStagiaires.length)} sur {filteredStagiaires.length}
+              Affichage {indexOfFirstItem + 1}-
+              {Math.min(indexOfLastItem, filteredStagiaires.length)} sur{" "}
+              {filteredStagiaires.length}
             </span>
             <nav>
               <ul className="pagination pagination-sm mb-0 shadow-sm border rounded">
-                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                  <button className="page-link border-0 text-dark" onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}>
+                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
+                  <button
+                    className="page-link border-0 text-dark"
+                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                  >
                     <i className="bi bi-chevron-left"></i>
                   </button>
                 </li>
                 {[...Array(totalPages)].map((_, i) => (
-                  <li key={i + 1} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+                  <li key={i + 1} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
                     <button
-                      className={`page-link border-0 ${currentPage === i + 1 ? 'bg-dark-navy text-white pointer-events-none' : 'text-dark'}`}
+                      className={`page-link border-0 ${
+                        currentPage === i + 1 ? "bg-dark-navy text-white" : "text-dark"
+                      }`}
                       onClick={() => setCurrentPage(i + 1)}
                     >
                       {i + 1}
                     </button>
                   </li>
                 ))}
-                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
-                  <button className="page-link border-0 text-dark" onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}>
+                <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
+                  <button
+                    className="page-link border-0 text-dark"
+                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                  >
                     <i className="bi bi-chevron-right"></i>
                   </button>
                 </li>
@@ -195,13 +218,13 @@ function StagiaireList({ onEdit, filiere, onBack }) {
       <style>{`
         .anim-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .bg-soft-primary { background-color: #e7f1ff; }
         .bg-soft-danger { background-color: #fceaea; }
         .bg-soft-warning { background-color: #fff8e6; }
         .bg-soft-success { background-color: #e6f9ed; }
+        .bg-soft-dark-navy { background-color: #e7f1ff; }
         .avatar-circle { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
         .custom-table tbody tr { transition: all 0.2s; border-color: #f8f9fa; }
-        .custom-table tbody tr:hover { background-color: #fcfcfc; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
+        .custom-table tbody tr:hover { background-color: #fcfcfc; }
         .btn-action-round { width: 34px; height: 34px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.2s; font-size: 0.85rem; }
         .btn-edit { background-color: #fff; color: #0d6efd; border: 1px solid #e7f1ff; }
         .btn-edit:hover { background-color: #0d6efd; color: #fff; transform: scale(1.1); }
@@ -209,6 +232,8 @@ function StagiaireList({ onEdit, filiere, onBack }) {
         .btn-delete:hover { background-color: #dc3545; color: #fff; transform: scale(1.1); }
         .btn-outline-dark-navy { color: #0A121A; border-color: #0A121A; }
         .btn-outline-dark-navy:hover { background-color: #0A121A; color: #fff; }
+        .bg-dark-navy { background-color: #0A121A; }
+        .text-dark-navy { color: #0A121A; }
         .transition-all { transition: all 0.2s ease-in-out; }
       `}</style>
     </div>

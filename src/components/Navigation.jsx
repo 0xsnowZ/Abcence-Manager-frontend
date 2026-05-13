@@ -1,17 +1,16 @@
 import React, { useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../store/authSlice.jsx";
+import { logoutUser } from "../store/authSlice.jsx";
 
 // Navigation Component
 function Navigation() {
   const { user } = useSelector((state) => state.auth);
-  const stagiaires = useSelector((state) => state.stagiaires.items);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    dispatch(logout());
+  const handleLogout = async () => {
+    await dispatch(logoutUser());
     navigate("/login");
   };
 
@@ -25,8 +24,10 @@ function Navigation() {
     ] : []),
   ];
 
-  // Show prof's assigned filières as badges in navbar
-  const profFilieres = user?.role === 'prof' && user?.filieres?.length > 0 ? user.filieres : [];
+  // Show prof's assigned programmes as badges in navbar
+  const profFilieres = user?.role === 'prof'
+    ? (user?.programmes || []).map((p) => p.code_diplome || p.code || p)
+    : [];
 
   return (
     <nav className="navbar navbar-expand-lg navbar-dark shadow-sm py-3 mb-4" style={{ backgroundColor: '#0A121A' }}>

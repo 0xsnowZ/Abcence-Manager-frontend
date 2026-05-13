@@ -1,8 +1,16 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import { addAbsence } from "../store/absenceSlice.jsx";
+import {
+  fetchTimeBlocks,
+  findOrCreateSession,
+} from "../store/sessionSlice.jsx";
+import { fetchProgrammes } from "../store/programmeSlice.jsx";
+import {
+  bulkSubmitAttendances,
+  fetchAttendances,
+} from "../store/absenceSlice.jsx";
 
 // Saisie Page
 function SaisiePage() {
@@ -10,86 +18,137 @@ function SaisiePage() {
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const allAbsences = useSelector((state) => state.absences.items);
   const { user } = useSelector((state) => state.auth);
+  const { items: programmes } = useSelector((state) => state.programmes);
+  const { timeBlocks } = useSelector((state) => state.sessions);
 
-  const isProf = user?.role === 'prof';
-  // Filières assigned to this prof (empty = unrestricted)
-  const profFilieres = isProf && user?.filieres?.length > 0 ? user.filieres : [];
-  // Lock the select when prof has exactly one filière
-  const lockedFiliere = profFilieres.length === 1 ? profFilieres[0] : null;
+  // Load time blocks and programmes on mount
+  useEffect(() => {
+    dispatch(fetchTimeBlocks());
+    dispatch(fetchProgrammes());
+  }, [dispatch]);
+
+  // Build slots from timeBlocks (TB1→S1, TB2→S2, …) or fall back to static
+  const slots = useMemo(() => {
+    if (timeBlocks && timeBlocks.length > 0) {
+      return timeBlocks.map((tb, idx) => ({
+        id: idx + 1, // 1-based UI slot id
+        timeBlockId: tb.id, // backend id
+        label: `${tb.start_time?.slice(0, 5) || ""}–${tb.end_time?.slice(0, 5) || ""}`,
+        short: `S${idx + 1}`,
+        code: tb.code, // e.g. "TB1"
+      }));
+    }
+    // Static fallback while loading
+    return [
+      {
+        id: 1,
+        timeBlockId: null,
+        label: "08:30–11:00",
+        short: "S1",
+        code: "TB1",
+      },
+      {
+        id: 2,
+        timeBlockId: null,
+        label: "11:00–13:30",
+        short: "S2",
+        code: "TB2",
+      },
+      {
+        id: 3,
+        timeBlockId: null,
+        label: "13:30–16:00",
+        short: "S3",
+        code: "TB3",
+      },
+      {
+        id: 4,
+        timeBlockId: null,
+        label: "16:00–18:30",
+        short: "S4",
+        code: "TB4",
+      },
+    ];
+  }, [timeBlocks]);
+
+  const isProf = user?.role === "prof";
+  // Filières assigned to this prof (from their programmes)
+  const profProgrammeIds = useMemo(() => {
+    if (!isProf) return [];
+    return (user?.programmes || []).map((p) => p.id);
+  }, [isProf, user]);
 
   // Date range: [startDate, endDate]
   const [dateRange, setDateRange] = useState([new Date(), new Date()]);
-  const [filiere, setFiliere] = useState(lockedFiliere || "");
+  const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
   const [showCalendar, setShowCalendar] = useState(false);
 
-  // If the prof's assigned filière changes (e.g. admin edits), sync to state
-  useEffect(() => {
-    if (lockedFiliere) {
-      setFiliere(lockedFiliere);
-      setSaisieData({});
-    }
-  }, [lockedFiliere]);
-
-  // saisieData: { [`${stagId}|${dateStr}|${slotId}`]: boolean }
+  // saisieData: { [`${stagId}|${dateStr}|${slotIdx}`]: boolean }
   const [saisieData, setSaisieData] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create a persistent map of ALREADY submitted absences from Redux
+  // Filtered programmes list (restrict for profs)
+  const availableProgrammes = useMemo(() => {
+    if (profProgrammeIds.length > 0) {
+      return programmes.filter((p) => profProgrammeIds.includes(p.id));
+    }
+    return programmes;
+  }, [programmes, profProgrammeIds]);
+
+  // Auto-select if only one programme available
+  useEffect(() => {
+    if (availableProgrammes.length === 1 && !selectedProgrammeId) {
+      setSelectedProgrammeId(String(availableProgrammes[0].id));
+    }
+  }, [availableProgrammes, selectedProgrammeId]);
+
+  const selectedProgramme = useMemo(
+    () =>
+      programmes.find((p) => String(p.id) === String(selectedProgrammeId)) ||
+      null,
+    [programmes, selectedProgrammeId],
+  );
+
+  // Stagiaires for the selected programme
+  const filteredStagiaires = useMemo(() => {
+    if (!selectedProgramme) return [];
+    return stagiaires.filter(
+      (s) =>
+        s.programme_id === selectedProgramme.id ||
+        s.filiere === selectedProgramme.code_diplome ||
+        s.programme_code === selectedProgramme.code_diplome,
+    );
+  }, [stagiaires, selectedProgramme]);
+
+  // Build a map of already-submitted absences for the grid
   const reduxAbsencesMap = useMemo(() => {
     const map = {};
     allAbsences.forEach((a) => {
       const dateStr = a.date;
-      const stagId = a.idstag;
-
-      // If we have explicit slots, use them
-      if (a.slots && Array.isArray(a.slots)) {
-        a.slots.forEach((slotId) => {
-          map[`${stagId}|${dateStr}|${slotId}`] = true;
-        });
-      } else {
-        // Fallback for legacy data/direct entry: fill slots sequentially based on hours
-        const numSlots = Math.ceil((a.heures || 2.5) / 2.5);
-        for (let i = 1; i <= numSlots; i++) {
-          map[`${stagId}|${dateStr}|${i}`] = true;
-        }
+      const stagId = a.idstag || a.stagiaire_id;
+      const tbId = a.time_block_id;
+      // Map time_block_id → slot index
+      const slotIdx = slots.findIndex((s) => s.timeBlockId === tbId);
+      if (slotIdx !== -1) {
+        map[`${stagId}|${dateStr}|${slotIdx + 1}`] = true;
       }
     });
     return map;
-  }, [allAbsences]);
-
-  const slots = [
-    { id: 1, label: "08:30-11:00", short: "S1" },
-    { id: 2, label: "11:00-13:30", short: "S2" },
-    { id: 3, label: "13:30-16:00", short: "S3" },
-    { id: 4, label: "16:00-18:30", short: "S4" },
-  ];
-
-  const filieres = useMemo(() => {
-    const all = [...new Set(stagiaires.map((s) => s.filiere))].sort();
-    // If prof has assigned filières, restrict the list
-    if (profFilieres.length > 0) return all.filter((f) => profFilieres.includes(f));
-    return all;
-  }, [stagiaires, profFilieres]);
-
-  const filteredStagiaires = useMemo(() => {
-    if (!filiere) return [];
-    return stagiaires.filter((s) => s.filiere === filiere);
-  }, [stagiaires, filiere]);
+  }, [allAbsences, slots]);
 
   // Calculate dates between start and end
   const getDatesInRange = (startDate, endDate) => {
     const dates = [];
     if (!startDate || !endDate) return dates;
-
-    let currentDate = new Date(startDate.getTime());
-    currentDate.setHours(0, 0, 0, 0);
-
+    let current = new Date(startDate.getTime());
+    current.setHours(0, 0, 0, 0);
     const end = new Date(endDate.getTime());
     end.setHours(0, 0, 0, 0);
-
-    while (currentDate <= end) {
-      dates.push(new Date(currentDate));
-      currentDate.setDate(currentDate.getDate() + 1);
+    while (current <= end) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
     }
     return dates;
   };
@@ -101,78 +160,125 @@ function SaisiePage() {
     return [];
   }, [dateRange]);
 
-  // Handle individual cell toggle
   const handleSaisieChange = (stagId, dateStr, slotId) => {
     const key = `${stagId}|${dateStr}|${slotId}`;
-    // Prevent editing already submitted data through this interface
-    if (reduxAbsencesMap[key]) return;
-
-    setSaisieData((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    if (reduxAbsencesMap[key]) return; // already submitted
+    setSaisieData((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Helper to format date for display
-  const formatHeaderDate = (d) => {
-    return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  };
+  const formatHeaderDate = (d) =>
+    d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
 
-  // Helper to format date for backend/state
   const formatStoreDate = (d) => {
     const offset = d.getTimezoneOffset();
-    const localDate = new Date(d.getTime() - offset * 60 * 1000);
-    return localDate.toISOString().split("T")[0];
+    const local = new Date(d.getTime() - offset * 60 * 1000);
+    return local.toISOString().split("T")[0];
   };
 
   const handleReset = () => {
     setSaisieData({});
-    setFiliere("");
+    setSelectedProgrammeId("");
     setDateRange([new Date(), new Date()]);
     setSuccessMessage("");
+    setSubmitError("");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!dateColumns.length || !filiere) return;
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      if (!dateColumns.length || !selectedProgramme) return;
 
-    let addedCount = 0;
-
-    // Group entries by student and date
-    const grouped = {};
-
-    Object.entries(saisieData).forEach(([key, isAbsent]) => {
-      if (isAbsent) {
-        const [stagId, dateStr, slotId] = key.split("|");
-        const groupKey = `${stagId}|${dateStr}`;
-        if (!grouped[groupKey]) grouped[groupKey] = [];
-        grouped[groupKey].push(parseInt(slotId));
+      // Collect checked cells: { `stagId|dateStr|slotIdx` }
+      const checkedEntries = Object.entries(saisieData).filter(([, v]) => v);
+      if (checkedEntries.length === 0) {
+        setSuccessMessage("Aucune nouvelle absence à enregistrer.");
+        setTimeout(() => setSuccessMessage(""), 3000);
+        return;
       }
-    });
 
-    Object.entries(grouped).forEach(([groupKey, slotsArray]) => {
-      const [stagId, dateStr] = groupKey.split("|");
-      dispatch(
-        addAbsence({
-          idstag: parseInt(stagId),
-          date: dateStr,
-          justifie: false,
-          heures: slotsArray.length * 2.5,
-          slots: slotsArray,
-        }),
-      );
-      addedCount++;
-    });
+      setIsSubmitting(true);
+      setSubmitError("");
 
-    if (addedCount > 0) {
-      setSuccessMessage(`${addedCount} absence(s) enregistrée(s) avec succès.`);
-      setSaisieData({});
-      setTimeout(() => setSuccessMessage(""), 5000);
-    } else {
-      setSuccessMessage("Aucune nouvelle absence à enregistrer.");
-      setTimeout(() => setSuccessMessage(""), 3000);
-    }
-  };
+      try {
+        // Group by (date, slotIdx) → need one session per (programme, date, time_block)
+        // Then group by session → list of stagiaire_ids
+        const byDateSlot = {};
+        checkedEntries.forEach(([key]) => {
+          const [stagId, dateStr, slotIdx] = key.split("|");
+          const dsKey = `${dateStr}|${slotIdx}`;
+          if (!byDateSlot[dsKey]) byDateSlot[dsKey] = [];
+          byDateSlot[dsKey].push(parseInt(stagId));
+        });
+
+        let totalAdded = 0;
+
+        for (const [dsKey, stagIds] of Object.entries(byDateSlot)) {
+          const [dateStr, slotIdx] = dsKey.split("|");
+          const slot = slots[parseInt(slotIdx) - 1];
+          if (!slot || !slot.timeBlockId) {
+            console.warn("No timeBlockId for slot", slotIdx);
+            continue;
+          }
+
+          // Find or create session
+          const sessionResult = await dispatch(
+            findOrCreateSession({
+              programme_id: selectedProgramme.id,
+              date_session: dateStr,
+              time_block_id: slot.timeBlockId,
+              created_by: user?.id || null,
+            }),
+          );
+
+          if (sessionResult.error) {
+            throw new Error(
+              sessionResult.payload || "Erreur de création de session",
+            );
+          }
+
+          const session = sessionResult.payload;
+
+          // Build bulk attendances payload
+          const attendances = stagIds.map((stagId) => ({
+            stagiaire_id: stagId,
+            type_absence_id: 1, // default: non-justifiée
+            justification: null,
+          }));
+
+          const bulkResult = await dispatch(
+            bulkSubmitAttendances({ session_id: session.id, attendances }),
+          );
+
+          if (bulkResult.error) {
+            throw new Error(
+              bulkResult.payload || "Erreur d'enregistrement des absences",
+            );
+          }
+
+          totalAdded += stagIds.length;
+        }
+
+        // Refresh absences list
+        dispatch(fetchAttendances());
+
+        setSuccessMessage(
+          `${totalAdded} absence(s) enregistrée(s) avec succès.`,
+        );
+        setSaisieData({});
+        setTimeout(() => setSuccessMessage(""), 5000);
+      } catch (err) {
+        setSubmitError(
+          err.message || "Une erreur est survenue lors de la soumission.",
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [saisieData, dateColumns, selectedProgramme, slots, dispatch, user],
+  );
+
+  const lockedProgramme =
+    availableProgrammes.length === 1 ? availableProgrammes[0] : null;
 
   return (
     <div className="container py-4">
@@ -182,7 +288,7 @@ function SaisiePage() {
           Registre de Présence
         </h2>
         <p className="text-muted">
-          Saisie par séances (S1-S4) de 2h30 chacune. Cliquez sur une case pour
+          Saisie par séances (S1–S4) de 2h30 chacune. Cliquez sur une case pour
           marquer une absence.
         </p>
       </div>
@@ -198,39 +304,52 @@ function SaisiePage() {
         </div>
         <div className="card-body bg-light border-bottom">
           <div className="row g-4 align-items-end">
+            {/* Programme / Filière select */}
             <div className="col-lg-4">
               <label className="form-label fw-bold small text-muted text-uppercase">
                 Classe / Filière
               </label>
               <div className="input-group input-group-lg">
                 <span className="input-group-text bg-white border-end-0">
-                  <i className={`bi ${lockedFiliere ? 'bi-lock-fill text-warning' : 'bi-mortarboard-fill text-dark-navy'}`}></i>
+                  <i
+                    className={`bi ${
+                      lockedProgramme
+                        ? "bi-lock-fill text-warning"
+                        : "bi-mortarboard-fill text-dark-navy"
+                    }`}
+                  ></i>
                 </span>
                 <select
                   className="form-select border-start-0"
-                  value={filiere}
+                  value={selectedProgrammeId}
                   onChange={(e) => {
-                    setFiliere(e.target.value);
+                    setSelectedProgrammeId(e.target.value);
                     setSaisieData({});
                   }}
                   required
-                  disabled={!!lockedFiliere}
+                  disabled={!!lockedProgramme}
                 >
                   <option value="">Sélectionner une filière</option>
-                  {filieres.map((f, i) => (
-                    <option key={i} value={f}>
-                      {f}
+                  {availableProgrammes.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code_diplome}
+                      {p.libelle ? ` — ${p.libelle}` : ""}
                     </option>
                   ))}
                 </select>
               </div>
-              {lockedFiliere && (
-                <small className="text-muted d-block mt-1" style={{ fontSize: '0.72rem' }}>
+              {lockedProgramme && (
+                <small
+                  className="text-muted d-block mt-1"
+                  style={{ fontSize: "0.72rem" }}
+                >
                   <i className="bi bi-info-circle me-1"></i>
                   Filière assignée par l'administrateur
                 </small>
               )}
             </div>
+
+            {/* Date range picker */}
             <div className="col-lg-5">
               <label className="form-label fw-bold small text-muted text-uppercase">
                 Période d'appel
@@ -284,6 +403,8 @@ function SaisiePage() {
                 )}
               </div>
             </div>
+
+            {/* Reset button */}
             <div className="col-lg-3">
               <button
                 className="btn btn-outline-secondary btn-lg w-100"
@@ -297,14 +418,26 @@ function SaisiePage() {
         </div>
       </div>
 
+      {/* Success / Error alerts */}
       {successMessage && (
         <div className="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4 fade show">
           <i className="bi bi-check-circle-fill fs-4 me-3"></i>
           <div className="fw-medium">{successMessage}</div>
         </div>
       )}
+      {submitError && (
+        <div className="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-4">
+          <i className="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+          <div className="fw-medium">{submitError}</div>
+          <button
+            type="button"
+            className="btn-close ms-auto"
+            onClick={() => setSubmitError("")}
+          ></button>
+        </div>
+      )}
 
-      {dateColumns.length > 0 && filiere ? (
+      {dateColumns.length > 0 && selectedProgramme ? (
         filteredStagiaires.length > 0 ? (
           <form onSubmit={handleSubmit}>
             <div className="card border-0 shadow-lg overflow-hidden">
@@ -314,7 +447,12 @@ function SaisiePage() {
                     <span className="bg-dark-navy text-white p-2 rounded me-3">
                       <i className="bi bi-people-fill"></i>
                     </span>
-                    {filiere}
+                    {selectedProgramme.code_diplome}
+                    {selectedProgramme.libelle && (
+                      <span className="text-muted fw-normal ms-2 small">
+                        — {selectedProgramme.libelle}
+                      </span>
+                    )}
                   </h5>
                   <div className="d-flex gap-4">
                     {slots.map((s) => (
@@ -348,10 +486,10 @@ function SaisiePage() {
                       {dateColumns.map((d, index) => (
                         <th
                           key={index}
-                          colSpan="4"
+                          colSpan={slots.length}
                           className="text-center py-2 border-bottom-0"
                           style={{
-                            minWidth: "160px",
+                            minWidth: `${slots.length * 40}px`,
                             backgroundColor: "#f8f9fa",
                           }}
                         >
@@ -370,7 +508,7 @@ function SaisiePage() {
                       ))}
                     </tr>
                     <tr className="bg-light text-muted">
-                      {dateColumns.map((d, dIdx) => (
+                      {dateColumns.map((_, dIdx) => (
                         <React.Fragment key={dIdx}>
                           {slots.map((s) => (
                             <th
@@ -386,49 +524,56 @@ function SaisiePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredStagiaires.map((stagiaire) => (
-                      <tr key={stagiaire.id} className="hover-row">
-                        <td className="ps-4 fw-bold text-dark border-end-heavy sticky-col bg-white">
-                          {stagiaire.nom}
-                        </td>
-                        {dateColumns.map((d, dIdx) => {
-                          const dateStr = formatStoreDate(d);
-                          return (
-                            <React.Fragment key={dIdx}>
-                              {slots.map((s) => {
-                                const key = `${stagiaire.id}|${dateStr}|${s.id}`;
-                                const isNew = !!saisieData[key];
-                                const isSubmitted = !!reduxAbsencesMap[key];
-                                const isChecked = isNew || isSubmitted;
+                    {filteredStagiaires.map((stagiaire) => {
+                      const displayName =
+                        stagiaire.nomComplet ||
+                        `${stagiaire.prenom || ""} ${stagiaire.nom || ""}`.trim() ||
+                        stagiaire.nom ||
+                        "—";
+                      return (
+                        <tr key={stagiaire.id} className="hover-row">
+                          <td className="ps-4 fw-bold text-dark border-end-heavy sticky-col bg-white">
+                            {displayName}
+                          </td>
+                          {dateColumns.map((d, dIdx) => {
+                            const dateStr = formatStoreDate(d);
+                            return (
+                              <React.Fragment key={dIdx}>
+                                {slots.map((s) => {
+                                  const key = `${stagiaire.id}|${dateStr}|${s.id}`;
+                                  const isNew = !!saisieData[key];
+                                  const isSubmitted = !!reduxAbsencesMap[key];
+                                  const isChecked = isNew || isSubmitted;
 
-                                return (
-                                  <td
-                                    key={s.id}
-                                    className={`text-center p-0 cell-slot ${isNew ? "is-absent" : ""} ${isSubmitted ? "is-submitted" : ""}`}
-                                    onClick={() =>
-                                      handleSaisieChange(
-                                        stagiaire.id,
-                                        dateStr,
-                                        s.id,
-                                      )
-                                    }
-                                    style={{ height: "48px" }}
-                                  >
-                                    {isChecked ? (
-                                      <span className="text-white fw-bold">
-                                        A
-                                      </span>
-                                    ) : (
-                                      <span className="dot-marker"></span>
-                                    )}
-                                  </td>
-                                );
-                              })}
-                            </React.Fragment>
-                          );
-                        })}
-                      </tr>
-                    ))}
+                                  return (
+                                    <td
+                                      key={s.id}
+                                      className={`text-center p-0 cell-slot ${isNew ? "is-absent" : ""} ${isSubmitted ? "is-submitted" : ""}`}
+                                      onClick={() =>
+                                        handleSaisieChange(
+                                          stagiaire.id,
+                                          dateStr,
+                                          s.id,
+                                        )
+                                      }
+                                      style={{ height: "48px" }}
+                                    >
+                                      {isChecked ? (
+                                        <span className="text-white fw-bold">
+                                          A
+                                        </span>
+                                      ) : (
+                                        <span className="dot-marker"></span>
+                                      )}
+                                    </td>
+                                  );
+                                })}
+                              </React.Fragment>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -437,14 +582,28 @@ function SaisiePage() {
                 <button
                   type="submit"
                   className="btn btn-dark-navy px-5 py-3 btn-lg shadow rounded-pill fw-bold"
+                  disabled={isSubmitting}
                 >
-                  <i className="bi bi-check2-all me-2"></i>
-                  VALIDER LE RÉGISTRE D'APPEL
+                  {isSubmitting ? (
+                    <>
+                      <span
+                        className="spinner-border spinner-border-sm me-2"
+                        role="status"
+                        aria-hidden="true"
+                      ></span>
+                      Enregistrement…
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-check2-all me-2"></i>
+                      VALIDER LE RÉGISTRE D'APPEL
+                    </>
+                  )}
                 </button>
                 <div className="mt-3 text-secondary small">
                   <i className="bi bi-info-circle-fill me-1"></i>
-                  Chaque séance sélectionnée "A" sera enregistrée comme 2h30
-                  d'absence.
+                  Chaque séance sélectionnée "A" sera enregistrée comme une
+                  absence de 2h30.
                 </div>
               </div>
             </div>
@@ -458,6 +617,9 @@ function SaisiePage() {
             <h5 className="mt-3 text-muted">
               Aucun stagiaire trouvé pour cette filière
             </h5>
+            <p className="text-muted small">
+              Ajoutez des stagiaires dans la page Stagiaires d'abord.
+            </p>
           </div>
         )
       ) : (
@@ -478,23 +640,23 @@ function SaisiePage() {
       )}
 
       <style>{`
-                .professional-grid { border-collapse: collapse; width: 100%; border: 1px solid #ced4da; }
-                .professional-grid th, .professional-grid td { border: 1px solid #adb5bd !important; }
-                .border-end-heavy { border-right: 3px solid #495057 !important; }
-                .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
-                .cell-slot { cursor: pointer; transition: background 0.2s; position: relative; }
-                .cell-slot:hover { background-color: #f8f9fa; }
-                .is-absent { background-color: #dc3545 !important; border-color: #dc3545 !important; }
-                .is-submitted { background-color: #0A121A !important; border-color: #0A121A !important; cursor: default !important; }
-                .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: #dee2e6; border-radius: 50%; opacity: 0.6; }
-                .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; transition: all 0.2s; }
-                .btn-dark-navy:hover { background-color: #1a232f; border-color: #1a232f; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-                .hover-row:hover .sticky-col { background-color: #f8f9fa !important; }
-                .bg-dark-navy { background-color: #0A121A; }
-                .text-dark-navy { color: #0A121A; }
-                .btn-white { background-color: #fff; border-color: #dee2e6; }
-                .tracking-wider { letter-spacing: 0.05em; }
-            `}</style>
+        .professional-grid { border-collapse: collapse; width: 100%; border: 1px solid #ced4da; }
+        .professional-grid th, .professional-grid td { border: 1px solid #adb5bd !important; }
+        .border-end-heavy { border-right: 3px solid #495057 !important; }
+        .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
+        .cell-slot { cursor: pointer; transition: background 0.2s; position: relative; }
+        .cell-slot:hover { background-color: #f8f9fa; }
+        .is-absent { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+        .is-submitted { background-color: #0A121A !important; border-color: #0A121A !important; cursor: default !important; }
+        .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: #dee2e6; border-radius: 50%; opacity: 0.6; }
+        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; transition: all 0.2s; }
+        .btn-dark-navy:hover:not(:disabled) { background-color: #1a232f; border-color: #1a232f; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .hover-row:hover .sticky-col { background-color: #f8f9fa !important; }
+        .bg-dark-navy { background-color: #0A121A; }
+        .text-dark-navy { color: #0A121A; }
+        .btn-white { background-color: #fff; border-color: #dee2e6; }
+        .tracking-wider { letter-spacing: 0.05em; }
+      `}</style>
     </div>
   );
 }

@@ -1,14 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import AbsenceForm from "../components/AbsenceForm.jsx";
 import AbsenceList from "../components/AbsenceList.jsx";
 import Filters from "../components/Filters.jsx";
 import CalendarHistory from "../components/CalendarHistory.jsx";
-
-// Absences Page
+import { fetchAttendances } from "../store/absenceSlice.jsx";
 
 function AbsencesPage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.absences);
+
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
   const [filters, setFilters] = useState({
@@ -17,6 +20,10 @@ function AbsencesPage() {
     stagiaireFilter: null,
     filiereFilter: null,
   });
+
+  useEffect(() => {
+    dispatch(fetchAttendances());
+  }, [dispatch]);
 
   const handleEdit = (absence) => {
     setEditingAbsence(absence);
@@ -45,20 +52,31 @@ function AbsencesPage() {
             <i className="bi bi-calendar-x-fill me-3 text-dark-navy"></i>
             Gestion des Absences
           </h2>
-          <p className="text-muted mb-0">
-            Suivi et gestion des absences individuelles.
-          </p>
+          <p className="text-muted mb-0">Suivi et gestion des absences individuelles.</p>
         </div>
         {!showForm && (
           <button
             className="btn btn-dark-navy rounded-pill px-4 py-2 shadow fw-bold d-flex align-items-center"
-            onClick={() => navigate('/saisie')}
+            onClick={() => navigate("/saisie")}
           >
             <i className="bi bi-plus-circle-fill me-2 fs-5"></i>
             Déclarer une Absence
           </button>
         )}
       </div>
+
+      {error && (
+        <div className="alert alert-danger mb-4">
+          <i className="bi bi-exclamation-triangle me-2"></i>{error}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-center py-3">
+          <div className="spinner-border spinner-border-sm text-dark me-2" role="status" />
+          <span className="text-muted small">Chargement des absences...</span>
+        </div>
+      )}
 
       {showForm ? (
         <div className="row justify-content-center">
@@ -86,10 +104,14 @@ function AbsencesPage() {
               />
             </div>
           </div>
-          
           <CalendarHistory />
         </>
       )}
+      <style>{`
+        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; }
+        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
+        .text-dark-navy { color: #0A121A; }
+      `}</style>
     </div>
   );
 }

@@ -1,82 +1,99 @@
 import { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { addStagiaire, updateStagiaire } from "../store/stagiaireSlice.jsx";
-
-// Stagiaire Form Component
+import { createStagiaire, updateStagiaire } from "../store/stagiaireSlice.jsx";
 
 const NEW_FILIERE_KEY = "__new__";
 
-function StagiaireForm({ stagiaire, onCancel, onSave }) {
+function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes = [] }) {
   const dispatch = useDispatch();
-  const stagiaires = useSelector((state) => state.stagiaires.items);
   const { user } = useSelector((state) => state.auth);
-  
-  const isProf = user?.role === 'prof';
-  const profFilieres = isProf && user?.filieres?.length > 0 ? user.filieres : [];
+  const isProf = user?.role === "prof";
+  const profFilieres = useMemo(
+    () =>
+      isProf && user?.programmes?.length > 0
+        ? user.programmes.map((p) => p.code_diplome)
+        : [],
+    [isProf, user]
+  );
 
-  // Derive sorted unique filières from existing stagiaires, but filter for profs
-  const filieres = useMemo(() => {
-    const all = [...new Set(stagiaires.map((s) => s.filiere))].sort();
-    if (profFilieres.length > 0) {
-      return all.filter(f => profFilieres.includes(f));
-    }
-    return all;
-  }, [stagiaires, profFilieres]);
+  const availableFilieres = useMemo(() => {
+    if (profFilieres.length > 0) return filieres.filter((f) => profFilieres.includes(f));
+    return filieres;
+  }, [filieres, profFilieres]);
 
   const [formData, setFormData] = useState({
     nom: "",
+    prenom: "",
     filiere: profFilieres.length === 1 ? profFilieres[0] : "",
     sexe: "m",
+    matricule: "",
   });
   const [errors, setErrors] = useState({});
-  // Controls whether the "new filière" text input is shown
   const [showCustomInput, setShowCustomInput] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (stagiaire) {
-      const isExisting = filieres.includes(stagiaire.filiere);
-      setShowCustomInput(!isExisting && !!stagiaire.filiere);
+      const isExisting = availableFilieres.includes(stagiaire.filiere || stagiaire.programme_code);
+      setShowCustomInput(!isExisting && !!(stagiaire.filiere || stagiaire.programme_code));
       setFormData({
         nom: stagiaire.nom || "",
-        filiere: stagiaire.filiere || "",
+        prenom: stagiaire.prenom || "",
+        filiere: stagiaire.filiere || stagiaire.programme_code || "",
         sexe: stagiaire.sexe || "m",
+        matricule: stagiaire.matricule || "",
       });
     } else if (profFilieres.length === 1) {
-       // Reset for new stagiaire if prof has exactly one filiere
-       setFormData(p => ({ ...p, filiere: profFilieres[0] }));
+      setFormData((p) => ({ ...p, filiere: profFilieres[0] }));
     }
-  }, [stagiaire, filieres, profFilieres]);
+  }, [stagiaire, availableFilieres, profFilieres]);
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.nom.trim()) {
-      newErrors.nom = "Le nom est requis";
-    }
-    if (!formData.filiere.trim()) {
-      newErrors.filiere = "La filière est requise";
-    }
+    if (!formData.nom.trim()) newErrors.nom = "Le nom est requis";
+    if (!formData.prenom.trim()) newErrors.prenom = "Le prénom est requis";
+    if (!formData.filiere.trim()) newErrors.filiere = "La filière est requise";
+    if (!formData.matricule) newErrors.matricule = "Le matricule est requis";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (validate()) {
+    if (!validate()) return;
+    setSaving(true);
+
+    // Find programme_id from filiere code
+    const programme = programmes.find((p) => p.code_diplome === formData.filiere);
+
+    const payload = {
+      nom: formData.nom,
+      prenom: formData.prenom,
+      sexe: formData.sexe,
+      matricule: formData.matricule,
+      // filiere stored locally for display
+      filiere: formData.filiere,
+      programme_code: formData.filiere,
+    };
+
+    try {
       if (stagiaire) {
-        dispatch(updateStagiaire({ ...stagiaire, ...formData }));
+        await dispatch(updateStagiaire({ id: stagiaire.id, ...payload })).unwrap();
       } else {
-        dispatch(addStagiaire(formData));
+        await dispatch(createStagiaire(payload)).unwrap();
       }
       onSave();
+    } catch (err) {
+      setErrors({ submit: err });
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: null }));
-    }
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: null }));
   };
 
   const handleFiliereSelect = (e) => {
@@ -100,9 +117,51 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
         </h5>
       </div>
       <div className="card-body p-4">
+        {errors.submit && (
+          <div className="alert alert-danger py-2 small mb-3">{errors.submit}</div>
+        )}
         <form onSubmit={handleSubmit}>
+          {/* Matricule */}
+          <div className="mb-3">
+            <label className="form-label fw-bold small text-muted text-uppercase">Matricule</label>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <i className="bi bi-hash text-dark-navy"></i>
+              </span>
+              <input
+                type="number"
+                className={`form-control form-control-lg border-start-0 bg-light ${errors.matricule ? "is-invalid" : ""}`}
+                name="matricule"
+                value={formData.matricule}
+                onChange={handleChange}
+                placeholder="Ex: 12345"
+              />
+            </div>
+            {errors.matricule && <div className="text-danger small mt-1">{errors.matricule}</div>}
+          </div>
+
+          {/* Prénom */}
+          <div className="mb-3">
+            <label className="form-label fw-bold small text-muted text-uppercase">Prénom</label>
+            <div className="input-group">
+              <span className="input-group-text bg-light border-end-0">
+                <i className="bi bi-person text-dark-navy"></i>
+              </span>
+              <input
+                type="text"
+                className={`form-control form-control-lg border-start-0 bg-light ${errors.prenom ? "is-invalid" : ""}`}
+                name="prenom"
+                value={formData.prenom}
+                onChange={handleChange}
+                placeholder="Ex: Ahmed"
+              />
+            </div>
+            {errors.prenom && <div className="text-danger small mt-1">{errors.prenom}</div>}
+          </div>
+
+          {/* Nom */}
           <div className="mb-4">
-            <label className="form-label fw-bold small text-muted text-uppercase">Nom Complet</label>
+            <label className="form-label fw-bold small text-muted text-uppercase">Nom de famille</label>
             <div className="input-group">
               <span className="input-group-text bg-light border-end-0">
                 <i className="bi bi-person text-dark-navy"></i>
@@ -113,12 +172,13 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
                 name="nom"
                 value={formData.nom}
                 onChange={handleChange}
-                placeholder="Ex: Ahmed Alami"
+                placeholder="Ex: Alami"
               />
             </div>
             {errors.nom && <div className="text-danger small mt-1">{errors.nom}</div>}
           </div>
 
+          {/* Filière */}
           <div className="mb-4">
             <label className="form-label fw-bold small text-muted text-uppercase">Filière / Classe</label>
             <div className="input-group">
@@ -129,15 +189,15 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
                 className={`form-select form-select-lg border-start-0 bg-light ${errors.filiere ? "is-invalid" : ""}`}
                 value={showCustomInput ? NEW_FILIERE_KEY : formData.filiere}
                 onChange={handleFiliereSelect}
+                disabled={profFilieres.length === 1}
               >
                 <option value="">-- Sélectionner une filière --</option>
-                {filieres.map((f) => (
+                {availableFilieres.map((f) => (
                   <option key={f} value={f}>{f}</option>
                 ))}
                 {!isProf && <option value={NEW_FILIERE_KEY}>✏️ Nouvelle filière...</option>}
               </select>
             </div>
-            {/* Custom filière text input, shown when user picks "Nouvelle filière..." */}
             {showCustomInput && !isProf && (
               <div className="input-group mt-2">
                 <span className="input-group-text bg-light border-end-0">
@@ -154,11 +214,10 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
                 />
               </div>
             )}
-            {errors.filiere && (
-              <div className="text-danger small mt-1">{errors.filiere}</div>
-            )}
+            {errors.filiere && <div className="text-danger small mt-1">{errors.filiere}</div>}
           </div>
 
+          {/* Genre */}
           <div className="mb-4">
             <label className="form-label fw-bold small text-muted text-uppercase d-block mb-3">Genre</label>
             <div className="d-flex gap-4">
@@ -194,8 +253,16 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
           </div>
 
           <div className="d-flex gap-3 pt-3">
-            <button type="submit" className="btn btn-dark-navy rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center flex-grow-1 justify-content-center">
-              <i className="bi bi-check-lg me-2 fs-5"></i>
+            <button
+              type="submit"
+              className="btn btn-dark-navy rounded-pill px-4 py-2 fw-bold shadow-sm d-flex align-items-center flex-grow-1 justify-content-center"
+              disabled={saving}
+            >
+              {saving ? (
+                <span className="spinner-border spinner-border-sm me-2" />
+              ) : (
+                <i className="bi bi-check-lg me-2 fs-5"></i>
+              )}
               {stagiaire ? "Mettre à jour" : "Enregistrer"}
             </button>
             <button
@@ -211,6 +278,10 @@ function StagiaireForm({ stagiaire, onCancel, onSave }) {
       <style>{`
         .tracking-wider { letter-spacing: 0.05em; }
         .custom-radio .form-check-input:checked { background-color: #0A121A; border-color: #0A121A; }
+        .bg-dark-navy { background-color: #0A121A; }
+        .text-dark-navy { color: #0A121A; }
+        .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; }
+        .btn-dark-navy:hover { background-color: #1a232f; color: #fff; }
       `}</style>
     </div>
   );
