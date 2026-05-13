@@ -5,6 +5,7 @@ import authReducer from "./authSlice.jsx";
 import profReducer from "./profSlice.jsx";
 import programmeSlice from "./programmeSlice.jsx";
 import sessionSlice from "./sessionSlice.jsx";
+import secteurSlice from "./secteurSlice.jsx";
 
 const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ const store = configureStore({
     profs: profReducer,
     programmes: programmeSlice.reducer,
     sessions: sessionSlice.reducer,
+    secteurs: secteurSlice.reducer,
   },
 });
 

@@ -1,4 +1,3 @@
-import React, { useMemo } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logoutUser } from "../store/authSlice.jsx";
@@ -9,8 +8,8 @@ function Navigation() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = async () => {
-    await dispatch(logoutUser());
+  const handleLogout = () => {
+    dispatch(logoutUser());
     navigate("/login");
   };
 
@@ -36,7 +35,7 @@ function Navigation() {
           <div className="bg-white text-dark p-2 rounded-circle me-3 d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px' }}>
             <i className="bi bi-calendar-check-fill"></i>
           </div>
-          <span className="tracking-tight text-white">ABSENCE MANAGER</span>
+          <span className="tracking-tight text-white">GESTION DES ABSENCES</span>
         </NavLink>
         <button
           className="navbar-toggler border-0"

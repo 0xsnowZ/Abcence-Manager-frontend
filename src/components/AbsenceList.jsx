@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { deleteAttendance, updateAttendance } from "../store/absenceSlice.jsx";
+import { deleteAttendance } from "../store/absenceSlice.jsx";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 
 function AbsenceList({
@@ -25,15 +25,18 @@ function AbsenceList({
     heures: a.heures ?? 2.5,
   }));
 
-  const getStagiaireName = (id) => {
-    const s = stagiaires.find((st) => st.id === id);
-    if (!s) return a?.stagiaireNom || "Inconnu";
+  const getStagiaireName = (absence) => {
+    if (absence.stagiaireNom) return absence.stagiaireNom;
+    const s = stagiaires.find((st) => st.id === absence.idstag);
+    if (!s) return "Inconnu";
     return s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
   };
 
   const getStagiaireFiliere = (id) => {
     const s = stagiaires.find((st) => st.id === id);
-    return s ? s.filiere || s.programme_code || "-" : "-";
+    if (!s) return "-";
+    const prog = (s.programmes || [])[0];
+    return prog?.filiere?.code || prog?.code_diplome || "-";
   };
 
   const filteredAbsences = absences
@@ -58,7 +61,7 @@ function AbsenceList({
       }
 
       if (searchTerm) {
-        const name = getStagiaireName(absence.idstag).toLowerCase();
+        const name = getStagiaireName(absence).toLowerCase();
         return name.includes(searchTerm.toLowerCase());
       }
 
@@ -152,7 +155,7 @@ function AbsenceList({
                           <i className="bi bi-person-fill"></i>
                         </div>
                         <span className="fw-bold text-dark">
-                          {absence.stagiaireNom || getStagiaireName(absence.idstag)}
+                          {getStagiaireName(absence)}
                         </span>
                       </div>
                     </td>

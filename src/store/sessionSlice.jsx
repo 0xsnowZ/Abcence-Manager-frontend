@@ -46,17 +46,17 @@ export const findOrCreateSession = createAsyncThunk(
       const sessions = listResp.data.data.data ?? listResp.data.data;
       const existing = sessions.find(
         (s) =>
-          s.date_session === date_session &&
+          s.date_session?.slice(0, 10) === date_session &&
           s.time_block_id === time_block_id
       );
       if (existing) return existing;
 
       // Create new session
       const createResp = await api.post("/sessions", {
-        programme_id,
+        classe_id: programme_id,
         date_session,
         time_block_id,
-        created_by: created_by || null,
+        created_by: created_by ? String(created_by) : null,
       });
       return createResp.data.data;
     } catch (err) {

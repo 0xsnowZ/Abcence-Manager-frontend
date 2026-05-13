@@ -107,7 +107,7 @@ const absenceSlice = createSlice({
       })
       .addCase(fetchAttendances.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = action.payload.map(normalizeAttendance);
       })
       .addCase(fetchAttendances.rejected, (state, action) => {
         state.loading = false;

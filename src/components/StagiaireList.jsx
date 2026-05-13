@@ -20,7 +20,9 @@ function StagiaireList({ onEdit, filiere, onBack }) {
 
   const filteredStagiaires = useMemo(() => {
     return stagiaires
-      .filter((s) => (s.filiere || s.programme_code) === filiere)
+      .filter((s) =>
+        (s.programmes || []).some((p) => p.code_diplome === filiere)
+      )
       .filter((s) =>
         getDisplayName(s).toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -112,7 +114,7 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                       <div className="d-flex align-items-center">
                         <div
                           className={`avatar-circle me-3 shadow-sm ${
-                            stagiaire.sexe === "f"
+                            ["f", "F"].includes(stagiaire.sexe)
                               ? "bg-soft-danger text-danger"
                               : "bg-soft-dark-navy text-dark-navy"
                           }`}
@@ -123,7 +125,7 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                       </div>
                     </td>
                     <td className="text-center">
-                      {stagiaire.sexe === "m" ? (
+                      {["m", "H"].includes(stagiaire.sexe) ? (
                         <span className="text-dark-navy" title="Masculin">
                           <i className="bi bi-gender-male fs-5"></i>
                         </span>

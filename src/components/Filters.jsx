@@ -14,13 +14,21 @@ function Filters({ onFilterChange }) {
   const [filiereFilter, setFiliereFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
 
-  // Extract unique filières
-  const filieres = useMemo(() => [...new Set(stagiaires.map((s) => s.filiere))].sort(), [stagiaires]);
+  const getStagiaireClasse = (s) => {
+    const prog = (s.programmes || [])[0];
+    return prog?.code_diplome || null;
+  };
+
+  // Extract unique classes from programmes
+  const filieres = useMemo(() => {
+    const codes = stagiaires.map(getStagiaireClasse).filter(Boolean);
+    return [...new Set(codes)].sort();
+  }, [stagiaires]);
 
   // When a Filière is selected, only show its trainees in the Stagiaire dropdown
   const filteredStagiaires = useMemo(() => {
     if (!filiereFilter) return stagiaires;
-    return stagiaires.filter((s) => s.filiere === filiereFilter);
+    return stagiaires.filter((s) => getStagiaireClasse(s) === filiereFilter);
   }, [stagiaires, filiereFilter]);
 
   const applyFilters = () => {
@@ -80,7 +88,7 @@ function Filters({ onFilterChange }) {
       <div className="card-body p-4">
         {/* Filter by Filière */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase">Filière</label>
+          <label className="form-label fw-bold small text-muted text-uppercase">Classe</label>
           <select
             className="form-select bg-light border-0"
             value={filiereFilter}
@@ -89,7 +97,7 @@ function Filters({ onFilterChange }) {
             setStagiaireFilter(""); // reset stagiaire when filière changes
           }}
           >
-            <option value="">Toutes les filières</option>
+            <option value="">Toutes les classes</option>
             {filieres.map((f, index) => (
               <option key={index} value={f}>
                 {f}
@@ -109,11 +117,15 @@ function Filters({ onFilterChange }) {
             <option value="">
               {filiereFilter ? `Tous (${filteredStagiaires.length})` : "Tous les stagiaires"}
             </option>
-            {filteredStagiaires.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nom}{!filiereFilter && ` (${s.filiere})`}
-              </option>
-            ))}
+            {filteredStagiaires.map((s) => {
+              const name = s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
+              const filiere = getStagiaireClasse(s);
+              return (
+                <option key={s.id} value={s.id}>
+                  {name}{!filiereFilter && filiere ? ` (${filiere})` : ""}
+                </option>
+              );
+            })}
           </select>
         </div>
 

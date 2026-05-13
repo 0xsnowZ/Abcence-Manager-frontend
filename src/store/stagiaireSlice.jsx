@@ -3,14 +3,22 @@ import api from "../services/api.js";
 
 // ─── Thunks ────────────────────────────────────────────────────────────────────
 
-/** GET /api/stagiaires?per_page=500 */
+/** GET /api/stagiaires — fetches all pages */
 export const fetchStagiaires = createAsyncThunk(
   "stagiaires/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/stagiaires", { params: { per_page: 500 } });
-      // Backend returns paginated: { data: { data: [...] } }
-      return response.data.data.data ?? response.data.data;
+      let all = [];
+      let page = 1;
+      while (true) {
+        const response = await api.get("/stagiaires", { params: { per_page: 200, page } });
+        const payload = response.data.data;
+        const items = payload.data ?? payload;
+        all = all.concat(items);
+        if (!payload.next_page_url) break;
+        page++;
+      }
+      return all;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de chargement");
     }
@@ -64,11 +72,10 @@ export const normalizeStagiaire = (s) => ({
   matricule: s.matricule,
   nom: s.nom,
   prenom: s.prenom,
-  // Full display name used in lists
   nomComplet: `${s.prenom} ${s.nom}`,
   sexe: s.sexe || "m",
-  // filiere is set separately when loading by programme
   filiere: s.filiere || s.programme_code || "",
+  programmes: s.programmes || [],
 });
 
 // ─── Slice ─────────────────────────────────────────────────────────────────────
@@ -95,6 +102,7 @@ const stagiaireSlice = createSlice({
         state.loading = false;
         state.items = action.payload;
       })
+
       .addCase(fetchStagiaires.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;

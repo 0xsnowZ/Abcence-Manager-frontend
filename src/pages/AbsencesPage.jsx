@@ -6,11 +6,13 @@ import AbsenceList from "../components/AbsenceList.jsx";
 import Filters from "../components/Filters.jsx";
 import CalendarHistory from "../components/CalendarHistory.jsx";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
+import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 
 function AbsencesPage() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { loading, error } = useSelector((state) => state.absences);
+  const stagiaires = useSelector((state) => state.stagiaires.items);
 
   const [showForm, setShowForm] = useState(false);
   const [editingAbsence, setEditingAbsence] = useState(null);
@@ -23,6 +25,7 @@ function AbsencesPage() {
 
   useEffect(() => {
     dispatch(fetchAttendances());
+    if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 
   const handleEdit = (absence) => {

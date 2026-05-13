@@ -7,6 +7,7 @@ import {
   findOrCreateSession,
 } from "../store/sessionSlice.jsx";
 import { fetchProgrammes } from "../store/programmeSlice.jsx";
+import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import {
   bulkSubmitAttendances,
   fetchAttendances,
@@ -21,10 +22,12 @@ function SaisiePage() {
   const { items: programmes } = useSelector((state) => state.programmes);
   const { timeBlocks } = useSelector((state) => state.sessions);
 
-  // Load time blocks and programmes on mount
+  // Load time blocks, programmes, stagiaires and existing attendances on mount
   useEffect(() => {
     dispatch(fetchTimeBlocks());
     dispatch(fetchProgrammes());
+    dispatch(fetchAttendances());
+    if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 
   // Build slots from timeBlocks (TB1→S1, TB2→S2, …) or fall back to static
@@ -33,7 +36,7 @@ function SaisiePage() {
       return timeBlocks.map((tb, idx) => ({
         id: idx + 1, // 1-based UI slot id
         timeBlockId: tb.id, // backend id
-        label: `${tb.start_time?.slice(0, 5) || ""}–${tb.end_time?.slice(0, 5) || ""}`,
+        label: `${tb.heure_debut?.slice(0, 5) || ""}–${tb.heure_fin?.slice(0, 5) || ""}`,
         short: `S${idx + 1}`,
         code: tb.code, // e.g. "TB1"
       }));
@@ -78,9 +81,22 @@ function SaisiePage() {
     return (user?.programmes || []).map((p) => p.id);
   }, [isProf, user]);
 
-  // Date range: [startDate, endDate]
-  const [dateRange, setDateRange] = useState([new Date(), new Date()]);
+  // Date range: default = current week Monday–Saturday
+  const getCurrentWeek = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0=Sun, 1=Mon, …, 6=Sat
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
+    monday.setHours(0, 0, 0, 0);
+    const saturday = new Date(monday);
+    saturday.setDate(monday.getDate() + 5);
+    saturday.setHours(0, 0, 0, 0);
+    return [monday, saturday];
+  };
+  const [dateRange, setDateRange] = useState(getCurrentWeek);
   const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
+  const [classeSearch, setClasseSearch] = useState("");
+  const [classeDropdownOpen, setClasseDropdownOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
   // saisieData: { [`${stagId}|${dateStr}|${slotIdx}`]: boolean }
@@ -114,11 +130,8 @@ function SaisiePage() {
   // Stagiaires for the selected programme
   const filteredStagiaires = useMemo(() => {
     if (!selectedProgramme) return [];
-    return stagiaires.filter(
-      (s) =>
-        s.programme_id === selectedProgramme.id ||
-        s.filiere === selectedProgramme.code_diplome ||
-        s.programme_code === selectedProgramme.code_diplome,
+    return stagiaires.filter((s) =>
+      (s.programmes || []).some((p) => p.id === selectedProgramme.id),
     );
   }, [stagiaires, selectedProgramme]);
 
@@ -126,7 +139,7 @@ function SaisiePage() {
   const reduxAbsencesMap = useMemo(() => {
     const map = {};
     allAbsences.forEach((a) => {
-      const dateStr = a.date;
+      const dateStr = (a.date || "").slice(0, 10);
       const stagId = a.idstag || a.stagiaire_id;
       const tbId = a.time_block_id;
       // Map time_block_id → slot index
@@ -178,7 +191,7 @@ function SaisiePage() {
   const handleReset = () => {
     setSaisieData({});
     setSelectedProgrammeId("");
-    setDateRange([new Date(), new Date()]);
+    setDateRange(getCurrentWeek());
     setSuccessMessage("");
     setSubmitError("");
   };
@@ -221,39 +234,25 @@ function SaisiePage() {
           }
 
           // Find or create session
-          const sessionResult = await dispatch(
+          const session = await dispatch(
             findOrCreateSession({
               programme_id: selectedProgramme.id,
               date_session: dateStr,
               time_block_id: slot.timeBlockId,
               created_by: user?.id || null,
             }),
-          );
-
-          if (sessionResult.error) {
-            throw new Error(
-              sessionResult.payload || "Erreur de création de session",
-            );
-          }
-
-          const session = sessionResult.payload;
+          ).unwrap();
 
           // Build bulk attendances payload
           const attendances = stagIds.map((stagId) => ({
             stagiaire_id: stagId,
-            type_absence_id: 1, // default: non-justifiée
+            type_absence_id: 2, // 2 = ABSENT
             justification: null,
           }));
 
-          const bulkResult = await dispatch(
+          await dispatch(
             bulkSubmitAttendances({ session_id: session.id, attendances }),
-          );
-
-          if (bulkResult.error) {
-            throw new Error(
-              bulkResult.payload || "Erreur d'enregistrement des absences",
-            );
-          }
+          ).unwrap();
 
           totalAdded += stagIds.length;
         }
@@ -268,7 +267,7 @@ function SaisiePage() {
         setTimeout(() => setSuccessMessage(""), 5000);
       } catch (err) {
         setSubmitError(
-          err.message || "Une erreur est survenue lors de la soumission.",
+          typeof err === "string" ? err : err?.message || "Une erreur est survenue lors de la soumission.",
         );
       } finally {
         setIsSubmitting(false);
@@ -288,8 +287,7 @@ function SaisiePage() {
           Registre de Présence
         </h2>
         <p className="text-muted">
-          Saisie par séances (S1–S4) de 2h30 chacune. Cliquez sur une case pour
-          marquer une absence.
+          Saisie par séances (S1–S4) de 2h30 chacune. Cliquez sur une case pour marquer une absence.
         </p>
       </div>
 
@@ -319,24 +317,69 @@ function SaisiePage() {
                     }`}
                   ></i>
                 </span>
-                <select
-                  className="form-select border-start-0"
-                  value={selectedProgrammeId}
-                  onChange={(e) => {
-                    setSelectedProgrammeId(e.target.value);
-                    setSaisieData({});
-                  }}
-                  required
-                  disabled={!!lockedProgramme}
-                >
-                  <option value="">Sélectionner une filière</option>
-                  {availableProgrammes.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code_diplome}
-                      {p.libelle ? ` — ${p.libelle}` : ""}
-                    </option>
-                  ))}
-                </select>
+                <div className="position-relative flex-grow-1">
+                  <input
+                    type="text"
+                    className="form-control border-start-0 rounded-start-0"
+                    placeholder="Sélectionner une classe..."
+                    value={
+                      classeDropdownOpen
+                        ? classeSearch
+                        : selectedProgramme
+                        ? `${selectedProgramme.code_diplome}${selectedProgramme.libelle ? ` — ${selectedProgramme.libelle}` : ""}`
+                        : ""
+                    }
+                    onChange={(e) => {
+                      setClasseSearch(e.target.value);
+                      setClasseDropdownOpen(true);
+                      if (!e.target.value) {
+                        setSelectedProgrammeId("");
+                        setSaisieData({});
+                      }
+                    }}
+                    onFocus={() => {
+                      setClasseSearch("");
+                      setClasseDropdownOpen(true);
+                    }}
+                    onBlur={() => setTimeout(() => setClasseDropdownOpen(false), 150)}
+                    disabled={!!lockedProgramme}
+                    autoComplete="off"
+                  />
+                  {classeDropdownOpen && (
+                    <ul className="classe-dropdown list-unstyled mb-0 position-absolute w-100 bg-white border rounded shadow" style={{ top: "100%", zIndex: 1050, maxHeight: "220px", overflowY: "auto" }}>
+                      {availableProgrammes
+                        .filter((p) => {
+                          const q = classeSearch.toLowerCase();
+                          return (
+                            p.code_diplome.toLowerCase().includes(q) ||
+                            (p.libelle || "").toLowerCase().includes(q)
+                          );
+                        })
+                        .map((p) => (
+                          <li
+                            key={p.id}
+                            className="classe-dropdown-item px-3 py-2"
+                            style={{ cursor: "pointer", fontSize: "0.9rem" }}
+                            onMouseDown={() => {
+                              setSelectedProgrammeId(String(p.id));
+                              setClasseSearch("");
+                              setClasseDropdownOpen(false);
+                              setSaisieData({});
+                            }}
+                          >
+                            <span className="fw-bold">{p.code_diplome}</span>
+                            {p.libelle && <span className="text-muted ms-2" style={{ fontSize: "0.8rem" }}>— {p.libelle}</span>}
+                          </li>
+                        ))}
+                      {availableProgrammes.filter((p) => {
+                        const q = classeSearch.toLowerCase();
+                        return p.code_diplome.toLowerCase().includes(q) || (p.libelle || "").toLowerCase().includes(q);
+                      }).length === 0 && (
+                        <li className="px-3 py-2 text-muted" style={{ fontSize: "0.85rem" }}>Aucune classe trouvée</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
               </div>
               {lockedProgramme && (
                 <small
@@ -472,9 +515,9 @@ function SaisiePage() {
                 </div>
               </div>
 
-              <div className="table-responsive">
+              <div className="table-responsive" style={{ maxHeight: "65vh", overflowY: "auto" }}>
                 <table className="table table-bordered table-sm mb-0 align-middle professional-grid">
-                  <thead>
+                  <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 #ced4da, 0 2px 0 #adb5bd" }}>
                     <tr className="bg-light">
                       <th
                         rowSpan="2"
@@ -487,7 +530,7 @@ function SaisiePage() {
                         <th
                           key={index}
                           colSpan={slots.length}
-                          className="text-center py-2 border-bottom-0"
+                          className="text-center py-2 border-bottom-0 date-group-start"
                           style={{
                             minWidth: `${slots.length * 40}px`,
                             backgroundColor: "#f8f9fa",
@@ -510,13 +553,13 @@ function SaisiePage() {
                     <tr className="bg-light text-muted">
                       {dateColumns.map((_, dIdx) => (
                         <React.Fragment key={dIdx}>
-                          {slots.map((s) => (
+                          {slots.map((s, sIdx) => (
                             <th
                               key={s.id}
-                              className="text-center small py-1 border-top-0"
-                              style={{ width: "40px", fontSize: "0.65rem" }}
+                              className={`text-center py-1 border-top-0${sIdx === 0 ? " date-group-start" : ""}`}
+                              style={{ width: "40px", fontSize: "0.6rem", lineHeight: 1.2 }}
                             >
-                              {s.id}
+                              <div className="fw-bold text-dark-navy">{s.short}</div>
                             </th>
                           ))}
                         </React.Fragment>
@@ -539,7 +582,7 @@ function SaisiePage() {
                             const dateStr = formatStoreDate(d);
                             return (
                               <React.Fragment key={dIdx}>
-                                {slots.map((s) => {
+                                {slots.map((s, sIdx) => {
                                   const key = `${stagiaire.id}|${dateStr}|${s.id}`;
                                   const isNew = !!saisieData[key];
                                   const isSubmitted = !!reduxAbsencesMap[key];
@@ -548,7 +591,7 @@ function SaisiePage() {
                                   return (
                                     <td
                                       key={s.id}
-                                      className={`text-center p-0 cell-slot ${isNew ? "is-absent" : ""} ${isSubmitted ? "is-submitted" : ""}`}
+                                      className={`text-center p-0 cell-slot${sIdx === 0 ? " date-group-start" : ""} ${isNew ? "is-absent" : ""} ${isSubmitted ? "is-submitted" : ""}`}
                                       onClick={() =>
                                         handleSaisieChange(
                                           stagiaire.id,
@@ -640,20 +683,25 @@ function SaisiePage() {
       )}
 
       <style>{`
-        .professional-grid { border-collapse: collapse; width: 100%; border: 1px solid #ced4da; }
-        .professional-grid th, .professional-grid td { border: 1px solid #adb5bd !important; }
-        .border-end-heavy { border-right: 3px solid #495057 !important; }
+        .professional-grid { border-collapse: collapse; width: 100%; border: 2px solid #ced4da; }
+        .professional-grid th, .professional-grid td { border: 1px solid #dee2e6 !important; }
+        .professional-grid thead tr:first-child th { border-bottom: 1px solid #dee2e6 !important; }
+        .professional-grid thead th { background-color: #f8f9fa; }
+        .date-group-start { border-left: 2px solid #adb5bd !important; }
+        .border-end-heavy { border-right: 2px solid #adb5bd !important; }
         .sticky-col { position: sticky; left: 0; z-index: 5; background-color: #fff !important; }
         .cell-slot { cursor: pointer; transition: background 0.2s; position: relative; }
-        .cell-slot:hover { background-color: #f8f9fa; }
+        .cell-slot:hover { background-color: #f1f3f5; }
         .is-absent { background-color: #dc3545 !important; border-color: #dc3545 !important; }
         .is-submitted { background-color: #0A121A !important; border-color: #0A121A !important; cursor: default !important; }
-        .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: #dee2e6; border-radius: 50%; opacity: 0.6; }
+        .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: #ced4da; border-radius: 50%; }
         .btn-dark-navy { background-color: #0A121A; border-color: #0A121A; color: #fff; transition: all 0.2s; }
         .btn-dark-navy:hover:not(:disabled) { background-color: #1a232f; border-color: #1a232f; color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        .hover-row:hover .sticky-col { background-color: #f8f9fa !important; }
+        .hover-row:hover td:not(.is-absent):not(.is-submitted) { background-color: #e8f0fe !important; transition: background-color 0.15s ease; }
         .bg-dark-navy { background-color: #0A121A; }
         .text-dark-navy { color: #0A121A; }
+        .classe-dropdown-item:hover { background-color: #e8f0fe; }
+        .classe-dropdown { margin-top: 2px; }
         .btn-white { background-color: #fff; border-color: #dee2e6; }
         .tracking-wider { letter-spacing: 0.05em; }
       `}</style>
