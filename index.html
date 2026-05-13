@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gestion d'État des Absences</title>
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <!-- Bootstrap Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+    />
+    <style>
+      body {
+        background-color: #f8f9fa;
+      }
+      .navbar-brand {
+        font-weight: bold;
+      }
+      .card {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .stat-card {
+        border-left: 4px solid #0d6efd;
+      }
+      .stat-card.justified {
+        border-left-color: #198754;
+      }
+      .stat-card.unjustified {
+        border-left-color: #dc3545;
+      }
+      .table th {
+        background-color: #e9ecef;
+      }
+      .btn-action {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+      }
+      .bg-dark-navy {
+        background-color: #0a121a !important;
+      }
+      .text-dark-navy {
+        color: #0a121a !important;
+      }
+      .btn-dark-navy {
+        background-color: #0a121a !important;
+        border-color: #0a121a !important;
+        color: #fff !important;
+      }
+      .btn-dark-navy:hover {
+        background-color: #1a232f !important;
+        border-color: #1a232f !important;
+        color: #fff !important;
+        transform: translateY(-1px);
+      }
+      .bg-soft-dark-navy {
+        background-color: #f0f2f5 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Application Entry -->
+    <script type="module" src="src/index.jsx"></script>
+  </body>
+</html>
