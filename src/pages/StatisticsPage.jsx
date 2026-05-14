@@ -3,10 +3,8 @@ import Statistics from "../components/Statistics.jsx";
 
 const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
 
-const lastMonthKey = (() => {
+const currentMonthKey = (() => {
   const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 })();
 
@@ -17,7 +15,7 @@ const monthLabel = (key) => {
 };
 
 function StatisticsPage() {
-  const [selectedMonth, setSelectedMonth] = useState(lastMonthKey);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
   const [showPicker, setShowPicker]       = useState(false);
   const pickerRef = useRef(null);
 

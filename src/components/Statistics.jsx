@@ -51,10 +51,20 @@ function Statistics({ selectedMonth }) {
     if (absences.length === 0 && !loading) dispatch(fetchAttendances());
   }, [dispatch, absences.length, loading]);
 
+  const normalizedAbsences = useMemo(() =>
+    absences.map((a) => ({
+      ...a,
+      date: (a.date ?? a.session?.date_session ?? "").slice(0, 10),
+      heures: a.heures ?? 2.5,
+      justifie: a.justifie ?? !!a.justification,
+    })),
+    [absences]
+  );
+
   const filteredAbsences = useMemo(() => {
-    if (!selectedMonth) return absences;
-    return absences.filter((a) => a.date?.startsWith(selectedMonth));
-  }, [absences, selectedMonth]);
+    if (!selectedMonth) return normalizedAbsences;
+    return normalizedAbsences.filter((a) => a.date.startsWith(selectedMonth));
+  }, [normalizedAbsences, selectedMonth]);
 
   // ── computed ──────────────────────────────────────────────────────────────
   const totalAbsences     = filteredAbsences.length;
@@ -88,22 +98,34 @@ function Statistics({ selectedMonth }) {
     { name: "Non Justifiées", value: unjustifiedCount },
   ], [justifiedCount, unjustifiedCount]);
 
-  // Trend chart: always uses all absences (shows full history with selected day highlighted)
+  // Trend chart: daily when a month is selected, monthly otherwise
   const trendData = useMemo(() => {
     const acc = {};
-    absences.forEach((a) => {
-      if (!a.date) return;
-      const parts = a.date.split("-");
-      if (parts.length < 2) return;
-      const y = parseInt(parts[0], 10);
-      const m = parseInt(parts[1], 10);
-      const key = `${y}-${String(m).padStart(2, "0")}`;
-      if (!acc[key]) acc[key] = { month: `${MONTH_NAMES[m - 1] || m} ${y}`, sortKey: y * 100 + m, justified: 0, unjustified: 0 };
-      if (isJustified(a)) acc[key].justified++;
-      else acc[key].unjustified++;
-    });
-    return Object.values(acc).sort((a, b) => a.sortKey - b.sortKey);
-  }, [absences]);
+    if (selectedMonth) {
+      filteredAbsences.forEach((a) => {
+        if (!a.date) return;
+        const [, , dd] = a.date.split("-");
+        const key = a.date;
+        const label = `${dd}/${selectedMonth.split("-")[1]}`;
+        if (!acc[key]) acc[key] = { month: label, sortKey: key, justified: 0, unjustified: 0 };
+        if (isJustified(a)) acc[key].justified++;
+        else acc[key].unjustified++;
+      });
+    } else {
+      normalizedAbsences.forEach((a) => {
+        if (!a.date) return;
+        const parts = a.date.split("-");
+        if (parts.length < 2) return;
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        const key = `${y}-${String(m).padStart(2, "0")}`;
+        if (!acc[key]) acc[key] = { month: `${MONTH_NAMES[m - 1] || m} ${y}`, sortKey: key, justified: 0, unjustified: 0 };
+        if (isJustified(a)) acc[key].justified++;
+        else acc[key].unjustified++;
+      });
+    }
+    return Object.values(acc).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }, [normalizedAbsences, filteredAbsences, selectedMonth]);
 
   const topAbsents = useMemo(() =>
     stagiaires
@@ -503,7 +525,7 @@ function Statistics({ selectedMonth }) {
                           </span>
                         </td>
                         <td className="text-center body-sm">
-                          {abs.date ? new Date(abs.date + "T00:00:00").toLocaleDateString("fr-FR") : "-"}
+                          {abs.date ? new Date(abs.date.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR") : "-"}
                         </td>
                         <td className="text-center fw-semibold d-none d-sm-table-cell" style={{ fontSize: "0.875rem" }}>
                           {getHours(abs)}h
