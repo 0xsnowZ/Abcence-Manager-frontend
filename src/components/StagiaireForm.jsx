@@ -7,6 +7,7 @@ const NEW_FILIERE_KEY = "__new__";
 
 function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes = [] }) {
   const dispatch = useDispatch();
+  const showToast = useToast();
   const { user } = useSelector((state) => state.auth);
   const isProf = user?.role === "prof";
   const profFilieres = useMemo(
@@ -80,11 +81,14 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
     try {
       if (stagiaire) {
         await dispatch(updateStagiaire({ id: stagiaire.id, ...payload })).unwrap();
+        showToast("Stagiaire mis à jour avec succès.", "success");
       } else {
         await dispatch(createStagiaire(payload)).unwrap();
+        showToast("Stagiaire créé avec succès.", "success");
       }
       onSave();
     } catch (err) {
+      showToast("Erreur lors de l'enregistrement.", "error");
       setErrors({ submit: err });
     } finally {
       setSaving(false);

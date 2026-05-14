@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { deleteAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
+import StagiaireDetail from "./StagiaireDetail.jsx";
 
 function AbsenceList({
   onEdit,
@@ -18,6 +19,7 @@ function AbsenceList({
   const user = useSelector((state) => state.auth.user);
   const [searchTerm, setSearchTerm] = useState("");
   const [confirm, setConfirm] = useState({ open: false, id: null });
+  const [viewingStagiaire, setViewingStagiaire] = useState(null);
 
   // Normalize: backend attendance has stagiaire_id; frontend used idstag
   const absences = rawAbsences.map((a) => ({
@@ -107,6 +109,15 @@ function AbsenceList({
     return new Date(dateStr).toLocaleDateString("fr-FR");
   };
 
+  if (viewingStagiaire) {
+    return (
+      <StagiaireDetail
+        stagiaire={viewingStagiaire}
+        onBack={() => setViewingStagiaire(null)}
+      />
+    );
+  }
+
   return (
     <>
     <div className="card-premium overflow-hidden">
@@ -122,19 +133,28 @@ function AbsenceList({
         </span>
       </div>
       <div className="card-body pt-0">
-        <div className="mb-4">
-          <div className="input-group input-group-lg shadow-sm rounded-pill overflow-hidden border">
-            <span className="input-group-text bg-white border-0 ps-4">
+        <div className="mb-3 pt-3 px-1">
+          <div className="input-group input-group-sm shadow-sm rounded overflow-hidden border">
+            <span className="input-group-text bg-light border-0 ps-3">
               <i className="bi bi-search text-muted"></i>
             </span>
             <input
               type="text"
-              className="form-control border-0 bg-white"
+              className="form-control border-0 bg-light"
               placeholder="Rechercher par nom, matricule, CIN ou téléphone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ boxShadow: "none" }}
+              style={{ boxShadow: "none", fontSize: "0.875rem" }}
             />
+            {searchTerm && (
+              <button
+                className="input-group-text bg-light border-0 pe-3"
+                onClick={() => setSearchTerm("")}
+                style={{ cursor: "pointer" }}
+              >
+                <i className="bi bi-x text-muted"></i>
+              </button>
+            )}
           </div>
         </div>
 
@@ -204,6 +224,16 @@ function AbsenceList({
                     <td className="text-end pe-4">
                       <div className="d-flex justify-content-end gap-2">
                         <button
+                          className="btn-action-round btn-view shadow-sm"
+                          onClick={() => {
+                            const s = stagiaires.find((st) => st.id === absence.idstag);
+                            if (s) setViewingStagiaire(s);
+                          }}
+                          title="Voir le profil"
+                        >
+                          <i className="bi bi-eye-fill"></i>
+                        </button>
+                        <button
                           className="btn-action-round btn-edit shadow-sm"
                           onClick={() => onEdit(absence)}
                           title="Modifier"
@@ -229,55 +259,50 @@ function AbsenceList({
         </div>
 
         {totalPages > 1 && (
-          <div className="d-flex justify-content-between align-items-center mt-4 border-top pt-3">
-            <span className="body-sm">
-              Affichage {indexOfFirstItem + 1}-
-              {Math.min(indexOfLastItem, filteredAbsences.length)} sur {filteredAbsences.length}
+          <div className="d-flex justify-content-between align-items-center mt-3 px-1 border-top pt-3">
+            <span className="body-sm text-muted">
+              {indexOfFirstItem + 1}–{Math.min(indexOfLastItem, filteredAbsences.length)} sur {filteredAbsences.length}
             </span>
-            <nav>
-              <ul className="pagination pagination-sm mb-0 shadow-sm border rounded">
-                <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                  <button
-                    className="page-link border-0 text-dark"
-                    onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                  >
-                    <i className="bi bi-chevron-left"></i>
-                  </button>
-                </li>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (page) =>
-                      page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1
-                  )
-                  .map((page, index, array) => (
-                    <React.Fragment key={page}>
-                      {index > 0 && array[index - 1] !== page - 1 && (
-                        <li className="page-item disabled">
-                          <span className="page-link border-0 text-muted">...</span>
-                        </li>
-                      )}
-                      <li className={`page-item ${currentPage === page ? "active" : ""}`}>
-                        <button
-                          className={`page-link border-0 ${
-                            currentPage === page ? "bg-dark-navy text-white" : "text-dark"
-                          }`}
-                          onClick={() => setCurrentPage(page)}
-                        >
-                          {page}
-                        </button>
-                      </li>
-                    </React.Fragment>
-                  ))}
-                <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                  <button
-                    className="page-link border-0 text-dark"
-                    onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                  >
-                    <i className="bi bi-chevron-right"></i>
-                  </button>
-                </li>
-              </ul>
-            </nav>
+            <div className="d-flex align-items-center gap-1">
+              <button
+                className="btn-action-round btn-edit"
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                style={{ opacity: currentPage === 1 ? 0.4 : 1 }}
+              >
+                <i className="bi bi-chevron-left" style={{ fontSize: "0.7rem" }}></i>
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter((page) => page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1)
+                .map((page, index, array) => (
+                  <React.Fragment key={page}>
+                    {index > 0 && array[index - 1] !== page - 1 && (
+                      <span className="body-sm text-muted px-1">…</span>
+                    )}
+                    <button
+                      onClick={() => setCurrentPage(page)}
+                      style={{
+                        width: 30, height: 30, borderRadius: "var(--radius-sm)",
+                        border: currentPage === page ? "none" : "1px solid var(--color-border)",
+                        background: currentPage === page ? "var(--color-primary)" : "transparent",
+                        color: currentPage === page ? "#fff" : "var(--color-text)",
+                        fontWeight: currentPage === page ? 700 : 400,
+                        fontSize: "0.8rem", cursor: "pointer",
+                      }}
+                    >
+                      {page}
+                    </button>
+                  </React.Fragment>
+                ))}
+              <button
+                className="btn-action-round btn-edit"
+                onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+                disabled={currentPage === totalPages}
+                style={{ opacity: currentPage === totalPages ? 0.4 : 1 }}
+              >
+                <i className="bi bi-chevron-right" style={{ fontSize: "0.7rem" }}></i>
+              </button>
+            </div>
           </div>
         )}
       </div>

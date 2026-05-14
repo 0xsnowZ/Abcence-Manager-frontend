@@ -5,7 +5,7 @@ import { deleteAttendance } from "../store/absenceSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
 
-function StagiaireList({ onEdit, filiere, onBack }) {
+function StagiaireList({ onEdit, onView, filiere, onBack }) {
   const dispatch = useDispatch();
   const showToast = useToast();
   const stagiaires = useSelector((state) => state.stagiaires.items);
@@ -154,6 +154,13 @@ function StagiaireList({ onEdit, filiere, onBack }) {
                     </td>
                     <td className="text-end pe-4">
                       <div className="d-flex justify-content-end gap-2">
+                        <button
+                          className="btn-action-round btn-view shadow-sm"
+                          onClick={() => onView(stagiaire)}
+                          title="Voir le profil"
+                        >
+                          <i className="bi bi-eye-fill"></i>
+                        </button>
                         {user?.role === "admin" && (
                           <button
                             className="btn-action-round btn-edit shadow-sm"

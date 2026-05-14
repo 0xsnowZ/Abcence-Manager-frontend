@@ -94,82 +94,62 @@ function CalendarHistory() {
             Historique du Calendrier
           </h5>
         </div>
-        <div className="card-body border-bottom" style={{ background: "var(--color-bg)" }}>
-          <div className="row g-4 align-items-end">
-            <div className="col-lg-5">
-              <label className="form-label label-caps">
-                Classe / Filière
-              </label>
-              <div className="input-group input-group-lg">
-                <span className="input-group-text bg-white border-end-0">
+        <div className="card-body p-3">
+          <div className="row g-3 align-items-end">
+            <div className="col-12 col-sm-5">
+              <label className="form-label label-caps mb-1">Classe / Filière</label>
+              <div className="input-group input-group-sm">
+                <span className="input-group-text bg-light border-end-0">
                   <i className="bi bi-mortarboard-fill text-dark-navy"></i>
                 </span>
                 <select
-                  className="form-select border-start-0"
+                  className="form-select form-select-sm border-start-0 bg-light"
                   value={filiere}
                   onChange={(e) => setFiliere(e.target.value)}
                 >
                   <option value="">Sélectionner une filière</option>
                   {filieres.map((f, i) => (
-                    <option key={i} value={f}>
-                      {f}
-                    </option>
+                    <option key={i} value={f}>{f}</option>
                   ))}
                 </select>
               </div>
             </div>
-            <div className="col-lg-7">
-              <label className="form-label label-caps">
-                Période d'appel
-              </label>
-              <div className="position-relative">
-                <button
-                  className="btn btn-white border bg-white btn-lg w-100 d-flex justify-content-between align-items-center shadow-sm"
-                  onClick={() => setShowCalendar(!showCalendar)}
-                  type="button"
+            <div className="col-12 col-sm-7 position-relative">
+              <label className="form-label label-caps mb-1">Période d'appel</label>
+              <button
+                className="btn btn-white border bg-light btn-sm w-100 d-flex justify-content-between align-items-center shadow-none text-start py-2"
+                onClick={() => setShowCalendar(!showCalendar)}
+                type="button"
+                style={{ fontSize: "0.85rem" }}
+              >
+                <span className="text-dark text-truncate">
+                  <i className="bi bi-calendar-range me-2 text-dark-navy"></i>
+                  {dateRange?.[0] ? dateRange[0].toLocaleDateString("fr-FR") : "Début"}
+                  <span className="mx-1 text-muted">➟</span>
+                  {dateRange?.[1] ? dateRange[1].toLocaleDateString("fr-FR") : "Fin"}
+                </span>
+                <i className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted ms-2`}></i>
+              </button>
+              {showCalendar && (
+                <div
+                  className="position-absolute end-0 mt-2 bg-white p-3 border rounded shadow-lg date-picker-dropdown"
+                  style={{ minWidth: "350px", zIndex: 1050 }}
                 >
-                  <span className="text-dark">
-                    <i className="bi bi-calendar-check-fill me-2 text-dark-navy"></i>
-                    {dateRange?.[0]
-                      ? dateRange[0].toLocaleDateString("fr-FR")
-                      : "Début"}
-                    <span className="mx-2 text-muted">➟</span>
-                    {dateRange?.[1]
-                      ? dateRange[1].toLocaleDateString("fr-FR")
-                      : "Fin"}
-                  </span>
-                  <i
-                    className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted`}
-                  ></i>
-                </button>
-
-                {showCalendar && (
-                  <div
-                    className="position-absolute end-0 mt-2 bg-white p-3 border rounded shadow-lg date-picker-dropdown"
-                    style={{ minWidth: "350px", zIndex: 1050 }}
-                  >
-                    <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-                      <span className="fw-bold small text-muted">
-                        CHOISIR LA PLAGE
-                      </span>
-                      <button
-                        className="btn-close btn-sm"
-                        onClick={() => setShowCalendar(false)}
-                      ></button>
-                    </div>
-                    <Calendar
-                      onChange={(val) => {
-                        setDateRange(val);
-                        if (val && val.length === 2 && val[0] && val[1])
-                          setShowCalendar(false);
-                      }}
-                      selectRange={true}
-                      value={dateRange}
-                      className="border-0 w-100"
-                    />
+                  <div className="d-flex justify-content-between align-items-center mb-2 px-1">
+                    <span className="fw-bold small text-muted" style={{ fontSize: "0.7rem" }}>CHOISIR LA PLAGE</span>
+                    <button className="btn-close btn-sm" onClick={() => setShowCalendar(false)}></button>
                   </div>
-                )}
-              </div>
+                  <Calendar
+                    onChange={(val) => {
+                      setDateRange(val);
+                      if (val && val.length === 2 && val[0] && val[1]) setShowCalendar(false);
+                    }}
+                    selectRange={true}
+                    value={dateRange}
+                    className="border-0 w-100 x-small-calendar"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

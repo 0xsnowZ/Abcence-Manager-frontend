@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import StagiaireForm from "../components/StagiaireForm.jsx";
 import StagiaireList from "../components/StagiaireList.jsx";
+import StagiaireDetail from "../components/StagiaireDetail.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import { fetchSecteurs, fetchProgrammesBySecteur } from "../store/secteurSlice.jsx";
 
@@ -37,6 +38,7 @@ function StagiairesPage() {
 
   const [selectedSecteur,   setSelectedSecteur]   = useState(null);
   const [selectedProgramme, setSelectedProgramme] = useState(null);
+  const [selectedStagiaire, setSelectedStagiaire] = useState(null);
   const [showForm,          setShowForm]           = useState(false);
   const [editingStagiaire,  setEditingStagiaire]   = useState(null);
 
@@ -107,7 +109,17 @@ function StagiairesPage() {
                 </li>
               )}
               {selectedProgramme && (
-                <li className="breadcrumb-item active">{selectedProgramme}</li>
+                <li
+                  className={`breadcrumb-item ${!selectedStagiaire ? "active" : "bc-link"}`}
+                  onClick={() => setSelectedStagiaire(null)}
+                >
+                  {selectedProgramme}
+                </li>
+              )}
+              {selectedStagiaire && (
+                <li className="breadcrumb-item active">
+                  {selectedStagiaire.prenom ? `${selectedStagiaire.prenom} ${selectedStagiaire.nom}` : selectedStagiaire.nomComplet || selectedStagiaire.nom}
+                </li>
               )}
             </ol>
           </nav>
@@ -133,10 +145,18 @@ function StagiairesPage() {
           </div>
         </div>
 
+      /* ── Level 4: stagiaire detail ── */
+      ) : selectedStagiaire ? (
+        <StagiaireDetail
+          stagiaire={selectedStagiaire}
+          onBack={() => setSelectedStagiaire(null)}
+        />
+
       /* ── Level 3: stagiaire list ── */
       ) : selectedProgramme ? (
         <StagiaireList
           onEdit={handleEdit}
+          onView={(s) => setSelectedStagiaire(s)}
           filiere={selectedProgramme}
           onBack={() => setSelectedProgramme(null)}
         />
