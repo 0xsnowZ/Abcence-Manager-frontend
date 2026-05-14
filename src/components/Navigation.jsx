@@ -10,12 +10,21 @@ function Navigation({ onCollapse }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [collapsed, setCollapsed]   = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
     dispatch(logoutUser());
     navigate("/login");
+  };
+
+  const handleBack = () => {
+    if (window.history.length > 2) {
+      navigate(-1);
+      return;
+    }
+
+    navigate("/");
   };
 
   const toggleCollapse = () => {
@@ -25,12 +34,12 @@ function Navigation({ onCollapse }) {
   };
 
   const tabs = [
-    { id: "stagiaires", label: "Stagiaires",   icon: "bi-people-fill",     path: "/" },
-    { id: "absences",   label: "Absences",     icon: "bi-calendar-x-fill", path: "/absences" },
-    { id: "saisie",     label: "Registre",     icon: "bi-pencil-square",   path: "/saisie" },
+    { id: "stagiaires", label: "Stagiaires", icon: "bi-people-fill", path: "/" },
+    { id: "absences", label: "Absences", icon: "bi-calendar-x-fill", path: "/absences" },
+    { id: "saisie", label: "Registre", icon: "bi-pencil-square", path: "/saisie" },
     ...(user?.role === "admin" ? [
-      { id: "profs",      label: "Professeurs",  icon: "bi-person-gear",     path: "/profs" },
-      { id: "statistics", label: "Statistiques", icon: "bi-graph-up-arrow",  path: "/statistiques" },
+      { id: "profs", label: "Professeurs", icon: "bi-person-gear", path: "/profs" },
+      { id: "statistics", label: "Statistiques", icon: "bi-graph-up-arrow", path: "/statistiques" },
     ] : []),
   ];
 
@@ -38,9 +47,8 @@ function Navigation({ onCollapse }) {
     ? (user?.programmes || []).map((p) => p.code_diplome || p.code || p)
     : [];
 
-  const initials     = (user?.name || user?.nom || "U").charAt(0).toUpperCase();
-  const displayName  = user?.name || user?.nom || "";
-  const currentLabel = tabs.find((t) => t.path === location.pathname)?.label || "Tableau de bord";
+  const initials = (user?.name || user?.nom || "U").charAt(0).toUpperCase();
+  const displayName = user?.name || user?.nom || "";
 
   return (
     <>
@@ -132,8 +140,10 @@ function Navigation({ onCollapse }) {
           <i className={`bi bi-${mobileOpen ? "x-lg" : "list"}`}></i>
         </button>
 
-        {/* Page title */}
-        <span className="topbar-title">{currentLabel}</span>
+        <button className="topbar-back-btn" onClick={handleBack} title="Retour" aria-label="Retour">
+          <i className="bi bi-arrow-left"></i>
+          <span>Retour</span>
+        </button>
 
         {/* Logout */}
         <div className="topbar-actions">
@@ -394,17 +404,32 @@ function Navigation({ onCollapse }) {
         }
         .topbar-hamburger:hover { background: var(--color-bg, #f1f5f9); }
 
-        .topbar-title {
-          font-size: 1rem;
-          font-weight: 600;
-          color: var(--color-text, #0f172a);
-          flex: 1;
-        }
-
         .topbar-actions {
           display: flex;
           align-items: center;
           gap: 12px;
+          margin-left: auto;
+        }
+        .topbar-back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.45rem;
+          background: #fff;
+          border: 1px solid var(--color-border);
+          color: var(--color-text);
+          border-radius: 10px;
+          padding: 0.45rem 0.85rem;
+          font-size: 0.86rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background 0.15s, border-color 0.15s, transform 0.15s, color 0.15s;
+          white-space: nowrap;
+        }
+        .topbar-back-btn:hover {
+          background: #f8fafc;
+          border-color: var(--color-border-strong);
+          color: var(--color-primary);
+          transform: translateY(-1px);
         }
         .topbar-avatar {
           width: 32px; height: 32px;

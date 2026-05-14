@@ -6,25 +6,63 @@ import {
   updateProf,
   deleteProf,
 } from "../store/profSlice.jsx";
-import { fetchProgrammes } from "../store/programmeSlice.jsx";
+import { fetchSecteurs, fetchProgrammesBySecteur } from "../store/secteurSlice.jsx";
 import { useToast } from "../components/ToastProvider.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
 
+const createAssignmentBlock = (secteurId = "", filiereIds = []) => ({
+  id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  secteurId: secteurId ? String(secteurId) : "",
+  filiereIds: [...new Set(filiereIds.map((filiereId) => String(filiereId)))],
+});
+
+const buildBlocksFromProf = (prof) => {
+  if (!prof?.programmes?.length) {
+    return [createAssignmentBlock()];
+  }
+
+  const blocksBySecteur = new Map();
+
+  prof.programmes.forEach((programme) => {
+    const secteurId = programme.filiere?.secteur?.id ? String(programme.filiere.secteur.id) : "";
+    const filiereId = String(programme.id);
+
+    if (!blocksBySecteur.has(secteurId)) {
+      blocksBySecteur.set(secteurId, []);
+    }
+
+    blocksBySecteur.get(secteurId).push(filiereId);
+  });
+
+  return [...blocksBySecteur.entries()].map(([secteurId, filiereIds]) =>
+    createAssignmentBlock(secteurId, filiereIds),
+  );
+};
+
 // ── ProfForm ────────────────────────────────────────────────────────────────
-function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
+function ProfForm({ prof, onCancel, onSave, secteurs }) {
+  const dispatch = useDispatch();
+  const { programmesBySecteur, loadingProgrammes } = useSelector((state) => state.secteurs);
   const [form, setForm] = useState(
     prof
       ? {
-          name: prof.name || "",
-          email: prof.email || "",
-          password: "",
-          programme_ids: (prof.programmes || []).map((p) => p.id),
-        }
-      : { name: "", email: "", password: "", programme_ids: [] },
+        name: prof.name || "",
+        email: prof.email || "",
+        password: "",
+        blocks: buildBlocksFromProf(prof),
+      }
+      : { name: "", email: "", password: "", blocks: [createAssignmentBlock()] },
   );
   const [errors, setErrors] = useState({});
   const [showPass, setShowPass] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingPayload, setPendingPayload] = useState(null);
+
+  const selectedProgrammeIds = useMemo(
+    () => form.blocks.flatMap((block) => block.filiereIds),
+    [form.blocks],
+  );
 
   const validate = () => {
     const e = {};
@@ -36,32 +74,101 @@ function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
     return Object.keys(e).length === 0;
   };
 
+  useEffect(() => {
+    setForm(
+      prof
+        ? {
+          name: prof.name || "",
+          email: prof.email || "",
+          password: "",
+          blocks: buildBlocksFromProf(prof),
+        }
+        : { name: "", email: "", password: "", blocks: [createAssignmentBlock()] },
+    );
+    setErrors({});
+    setConfirmOpen(false);
+    setPendingPayload(null);
+  }, [prof]);
+
+  useEffect(() => {
+    form.blocks.forEach((block) => {
+      if (block.secteurId && !programmesBySecteur[block.secteurId]) {
+        dispatch(fetchProgrammesBySecteur(block.secteurId));
+      }
+    });
+  }, [dispatch, form.blocks, programmesBySecteur]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((p) => ({ ...p, [name]: value }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: null }));
   };
 
-  const toggleProgramme = (id) => {
-    setForm((p) => ({
-      ...p,
-      programme_ids: p.programme_ids.includes(id)
-        ? p.programme_ids.filter((x) => x !== id)
-        : [...p.programme_ids, id],
+  const updateBlock = (blockId, updater) => {
+    setForm((current) => ({
+      ...current,
+      blocks: current.blocks.map((block) => (block.id === blockId ? updater(block) : block)),
     }));
   };
 
-  const handleSave = async () => {
-    if (!validate()) return;
-    setSaving(true);
-    const payload = {
-      name: form.name,
-      email: form.email,
-      programme_ids: form.programme_ids,
+  const handleSecteurChange = (blockId, secteurId) => {
+    updateBlock(blockId, () => createAssignmentBlock(secteurId, []));
+    if (secteurId && !programmesBySecteur[secteurId]) {
+      dispatch(fetchProgrammesBySecteur(secteurId));
+    }
+  };
+
+  const toggleFiliere = (blockId, filiereId) => {
+    const selectedId = String(filiereId);
+    updateBlock(blockId, (block) => ({
+      ...block,
+      filiereIds: block.filiereIds.includes(selectedId)
+        ? block.filiereIds.filter((existingId) => existingId !== selectedId)
+        : [...block.filiereIds, selectedId],
+    }));
+  };
+
+  const addBlock = () => {
+    setForm((current) => ({
+      ...current,
+      blocks: [...current.blocks, createAssignmentBlock()],
+    }));
+  };
+
+  const removeBlock = (blockId) => {
+    setForm((current) => {
+      const nextBlocks = current.blocks.filter((block) => block.id !== blockId);
+      return {
+        ...current,
+        blocks: nextBlocks.length > 0 ? nextBlocks : [createAssignmentBlock()],
+      };
+    });
+  };
+
+  const preparePayload = () => {
+    const programmeIds = [...new Set(form.blocks.flatMap((block) => block.filiereIds))];
+
+    return {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      programme_ids: programmeIds.map((programmeId) => Number(programmeId)),
+      ...(form.password ? { password: form.password } : {}),
+      ...(prof ? { id: prof.id } : {}),
     };
-    if (form.password) payload.password = form.password;
-    if (prof) payload.id = prof.id;
-    await onSave(payload);
+  };
+
+  const handleSaveClick = () => {
+    if (!validate()) return;
+    setPendingPayload(preparePayload());
+    setConfirmOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!pendingPayload) return;
+    setSaving(true);
+    await onSave(pendingPayload);
+    setConfirmOpen(false);
+    setPendingPayload(null);
     setSaving(false);
   };
 
@@ -170,45 +277,114 @@ function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
 
         {/* Programmes multi-select */}
         <div className="mb-4">
-          <label className="form-label fw-bold small text-muted text-uppercase d-flex justify-content-between">
-            <span>Filières / Programmes assignés</span>
-            {form.programme_ids.length > 0 && (
-              <span className="badge bg-dark-navy rounded-pill">
-                {form.programme_ids.length} sélectionné(s)
-              </span>
-            )}
+          <label className="form-label fw-bold small text-muted text-uppercase d-flex justify-content-between align-items-center">
+            <span>Assignation secteur / filières</span>
+            <span className="badge bg-dark-navy rounded-pill">
+              {selectedProgrammeIds.length} sélectionnée(s)
+            </span>
           </label>
-          {allProgrammes.length === 0 ? (
-            <p className="text-muted small fst-italic">
-              Aucun programme disponible.
-            </p>
-          ) : (
-            <div className="d-flex flex-wrap gap-2">
-              {allProgrammes.map((p) => {
-                const checked = form.programme_ids.includes(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => toggleProgramme(p.id)}
-                    className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${
-                      checked ? "btn-dark-navy" : "btn-outline-secondary"
-                    }`}
-                  >
-                    {checked && <i className="bi bi-check me-1"></i>}
-                    {p.code_diplome}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <div className="mt-2">
-            <small className="text-muted">
-              <i className="bi bi-info-circle me-1"></i>
-              Le professeur ne verra que ces filières dans la page Saisie.
-              {form.programme_ids.length === 0 &&
-                " (Aucune restriction si vide)"}
-            </small>
+
+          <div className="d-grid gap-3">
+            {form.blocks.map((block, blockIndex) => {
+              const blockProgrammes = block.secteurId ? (programmesBySecteur[block.secteurId] || []) : [];
+              const assignedElsewhere = new Set(
+                form.blocks
+                  .filter((otherBlock) => otherBlock.id !== block.id)
+                  .flatMap((otherBlock) => otherBlock.filiereIds),
+              );
+              const visibleProgrammes = blockProgrammes.filter(
+                (programme) => !assignedElsewhere.has(String(programme.id)) || block.filiereIds.includes(String(programme.id)),
+              );
+
+              return (
+                <div key={block.id} className="border rounded-4 p-3 bg-light">
+                  <div className="d-flex justify-content-between align-items-center gap-2 mb-3">
+                    <div className="fw-semibold text-dark">
+                      Bloc {blockIndex + 1}
+                    </div>
+                    {form.blocks.length > 1 && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-outline-danger rounded-pill"
+                        onClick={() => removeBlock(block.id)}
+                      >
+                        <i className="bi bi-trash3 me-1"></i>
+                        Retirer
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label small text-muted text-uppercase">Secteur</label>
+                    <select
+                      className="form-select"
+                      value={block.secteurId}
+                      onChange={(event) => handleSecteurChange(block.id, event.target.value)}
+                    >
+                      <option value="">-- Sélectionner un secteur --</option>
+                      {secteurs.map((secteur) => (
+                        <option key={secteur.id} value={secteur.id}>
+                          {secteur.code}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {block.secteurId && (
+                    <div className="mb-3">
+                      <div className="d-flex justify-content-between align-items-center mb-2">
+                        <label className="form-label small text-muted text-uppercase mb-0">Filières</label>
+                        <small className="text-muted">
+                          Sélection multiple possible
+                        </small>
+                      </div>
+
+                      {loadingProgrammes && !programmesBySecteur[block.secteurId] ? (
+                        <div className="py-3 text-muted small">
+                          <span className="spinner-border spinner-border-sm me-2" />
+                          Chargement des filières...
+                        </div>
+                      ) : visibleProgrammes.length === 0 ? (
+                        <div className="text-muted small fst-italic py-2">
+                          Aucune filière disponible pour ce secteur.
+                        </div>
+                      ) : (
+                        <div className="d-flex flex-wrap gap-2">
+                          {visibleProgrammes.map((programme) => {
+                            const programmeId = String(programme.id);
+                            const checked = block.filiereIds.includes(programmeId);
+
+                            return (
+                              <button
+                                key={programmeId}
+                                type="button"
+                                className={`btn btn-sm rounded-pill px-3 fw-bold transition-all ${checked ? "btn-dark-navy" : "btn-outline-secondary"
+                                  }`}
+                                onClick={() => toggleFiliere(block.id, programmeId)}
+                              >
+                                {checked && <i className="bi bi-check me-1"></i>}
+                                {programme.code_diplome}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-2 border-top">
+                    <small className="text-muted">
+                      <i className="bi bi-info-circle me-1"></i>
+                      Les filières déjà attribuées dans un autre bloc sont masquées.
+                    </small>
+                    <button type="button" className="btn btn-sm btn-outline-primary rounded-pill" onClick={addBlock}>
+                      <i className="bi bi-plus-lg me-1"></i>
+                      Ajouter une autre filière
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -216,7 +392,7 @@ function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
         <div className="d-flex gap-2 pt-3 border-top">
           <button
             className="btn btn-dark-navy rounded-pill px-4 fw-bold flex-grow-1"
-            onClick={handleSave}
+            onClick={handleSaveClick}
             disabled={saving}
           >
             {saving ? (
@@ -239,6 +415,19 @@ function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
           </button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        title={prof ? "Confirmer la mise à jour" : "Confirmer la création"}
+        message={prof ? "Save changes to this professor?" : "Créer ce professeur maintenant ?"}
+        confirmLabel={prof ? "Mettre à jour" : "Créer"}
+        variant="primary"
+        onConfirm={handleSave}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingPayload(null);
+        }}
+      />
     </div>
   );
 }
@@ -247,11 +436,11 @@ function ProfForm({ prof, onCancel, onSave, allProgrammes }) {
 function ProfsPage() {
   const dispatch = useDispatch();
   const { items: profs, loading, error } = useSelector((state) => state.profs);
-  const { items: programmes } = useSelector((state) => state.programmes);
+  const { items: secteurs } = useSelector((state) => state.secteurs);
 
   useEffect(() => {
     dispatch(fetchProfs());
-    dispatch(fetchProgrammes());
+    dispatch(fetchSecteurs());
   }, [dispatch]);
 
   const showToast = useToast();
@@ -388,84 +577,84 @@ function ProfsPage() {
                 </div>
               ) : (
                 <div className="table-responsive scroll-thin">
-                <table className="table align-middle mb-0 premium-table">
-                  <thead>
-                    <tr>
-                      <th className="ps-4 py-3">Professeur</th>
-                      <th className="py-3">Filières assignées</th>
-                      <th className="py-3 text-end pe-4">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProfs.map((p) => {
-                      const displayName = p.name || p.email || "—";
-                      const profProgrammes = p.programmes || [];
-                      return (
-                        <tr key={p.id} className="prof-row">
-                          <td className="ps-4">
-                            <div className="d-flex align-items-center">
-                              <div
-                                className="rounded-circle bg-dark-navy text-white d-flex align-items-center justify-content-center me-3 fw-bold flex-shrink-0"
-                                style={{ width: 38, height: 38, fontSize: 15 }}
-                              >
-                                {displayName.charAt(0).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="fw-bold text-dark">
-                                  {displayName}
+                  <table className="table align-middle mb-0 premium-table">
+                    <thead>
+                      <tr>
+                        <th className="ps-4 py-3">Professeur</th>
+                        <th className="py-3">Filières assignées</th>
+                        <th className="py-3 text-end pe-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProfs.map((p) => {
+                        const displayName = p.name || p.email || "—";
+                        const profProgrammes = p.programmes || [];
+                        return (
+                          <tr key={p.id} className="prof-row">
+                            <td className="ps-4">
+                              <div className="d-flex align-items-center">
+                                <div
+                                  className="rounded-circle bg-dark-navy text-white d-flex align-items-center justify-content-center me-3 fw-bold flex-shrink-0"
+                                  style={{ width: 38, height: 38, fontSize: 15 }}
+                                >
+                                  {displayName.charAt(0).toUpperCase()}
                                 </div>
-                                <small className="text-muted">{p.email}</small>
+                                <div>
+                                  <div className="fw-bold text-dark">
+                                    {displayName}
+                                  </div>
+                                  <small className="text-muted">{p.email}</small>
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            {profProgrammes.length > 0 ? (
-                              <div className="d-flex flex-wrap gap-1">
-                                {profProgrammes.map((prog) => (
-                                  <span
-                                    key={prog.id}
-                                    className="badge rounded-pill bg-dark-navy px-2"
-                                    style={{ fontSize: "0.7rem" }}
-                                  >
-                                    {prog.code_diplome}
-                                  </span>
-                                ))}
+                            </td>
+                            <td>
+                              {profProgrammes.length > 0 ? (
+                                <div className="d-flex flex-wrap gap-1">
+                                  {profProgrammes.map((prog) => (
+                                    <span
+                                      key={prog.id}
+                                      className="badge rounded-pill bg-dark-navy px-2"
+                                      style={{ fontSize: "0.7rem" }}
+                                    >
+                                      {prog.code_diplome}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span
+                                  className="badge rounded-pill bg-light text-muted border"
+                                  style={{ fontSize: "0.7rem" }}
+                                >
+                                  Toutes (sans restriction)
+                                </span>
+                              )}
+                            </td>
+                            <td className="text-end pe-4">
+                              <div className="d-flex justify-content-end gap-2">
+                                <button
+                                  className="btn-action-round btn-edit shadow-sm"
+                                  title="Modifier"
+                                  onClick={() => {
+                                    setSelectedProf(p);
+                                    setActionError(null);
+                                  }}
+                                >
+                                  <i className="bi bi-pencil-fill"></i>
+                                </button>
+                                <button
+                                  className="btn-action-round btn-delete shadow-sm"
+                                  title="Supprimer"
+                                  onClick={() => setConfirm({ open: true, id: p.id, name: p.name || p.email || "ce professeur" })}
+                                >
+                                  <i className="bi bi-trash3-fill"></i>
+                                </button>
                               </div>
-                            ) : (
-                              <span
-                                className="badge rounded-pill bg-light text-muted border"
-                                style={{ fontSize: "0.7rem" }}
-                              >
-                                Toutes (sans restriction)
-                              </span>
-                            )}
-                          </td>
-                          <td className="text-end pe-4">
-                            <div className="d-flex justify-content-end gap-2">
-                              <button
-                                className="btn-action-round btn-edit shadow-sm"
-                                title="Modifier"
-                                onClick={() => {
-                                  setSelectedProf(p);
-                                  setActionError(null);
-                                }}
-                              >
-                                <i className="bi bi-pencil-fill"></i>
-                              </button>
-                              <button
-                                className="btn-action-round btn-delete shadow-sm"
-                                title="Supprimer"
-                                onClick={() => setConfirm({ open: true, id: p.id, name: p.name || p.email || "ce professeur" })}
-                              >
-                                <i className="bi bi-trash3-fill"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
@@ -477,7 +666,7 @@ function ProfsPage() {
           <div className="col-lg-5">
             <ProfForm
               prof={selectedProf || null}
-              allProgrammes={programmes}
+              secteurs={secteurs}
               onCancel={() => setSelectedProf(null)}
               onSave={handleSave}
             />

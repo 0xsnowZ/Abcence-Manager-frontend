@@ -6,6 +6,7 @@ import "react-calendar/dist/Calendar.css";
 // Filters Component
 
 function Filters({ onFilterChange }) {
+  const { user } = useSelector((state) => state.auth);
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const [filterType, setFilterType] = useState("all");
   const [dateRange, setDateRange] = useState([null, null]);
@@ -14,16 +15,29 @@ function Filters({ onFilterChange }) {
   const [filiereFilter, setFiliereFilter] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
 
+  const profFilieres = useMemo(
+    () =>
+      user?.role === "prof" && Array.isArray(user?.programmes)
+        ? user.programmes.map((programme) => programme.code_diplome || programme.code || programme)
+        : [],
+    [user],
+  );
+
   const getStagiaireClasse = (s) => {
     const prog = (s.programmes || [])[0];
     return prog?.code_diplome || null;
   };
 
-  // Extract unique classes from programmes
+  // Extract available classes from the current user when possible,
+  // otherwise fall back to the classes present in the loaded data.
   const filieres = useMemo(() => {
+    if (profFilieres.length > 0) {
+      return [...new Set(profFilieres)].sort();
+    }
+
     const codes = stagiaires.map(getStagiaireClasse).filter(Boolean);
     return [...new Set(codes)].sort();
-  }, [stagiaires]);
+  }, [stagiaires, profFilieres]);
 
   // When a Filière is selected, only show its trainees in the Stagiaire dropdown
   const filteredStagiaires = useMemo(() => {
@@ -96,7 +110,9 @@ function Filters({ onFilterChange }) {
               value={filiereFilter}
               onChange={(e) => { setFiliereFilter(e.target.value); setStagiaireFilter(""); }}
             >
-              <option value="">Toutes les classes</option>
+              <option value="">
+                {profFilieres.length > 0 ? "Mes classes" : "Toutes les classes"}
+              </option>
               {filieres.map((f, i) => <option key={i} value={f}>{f}</option>)}
             </select>
           </div>

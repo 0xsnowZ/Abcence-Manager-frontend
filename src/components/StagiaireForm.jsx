@@ -23,31 +23,31 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
     return filieres;
   }, [filieres, profFilieres]);
 
-  const [formData, setFormData] = useState({
-    nom: "",
-    prenom: "",
-    filiere: profFilieres.length === 1 ? profFilieres[0] : "",
-    sexe: "m",
-    matricule: "",
+  const getInitialFormData = () => ({
+    nom: stagiaire?.nom || "",
+    prenom: stagiaire?.prenom || "",
+    filiere:
+      stagiaire?.filiere ||
+      stagiaire?.programme_code ||
+      (profFilieres.length === 1 ? profFilieres[0] : ""),
+    sexe: stagiaire?.sexe || "m",
+    matricule: stagiaire?.matricule || "",
   });
+
+  const [formData, setFormData] = useState(getInitialFormData);
   const [errors, setErrors] = useState({});
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (stagiaire) {
-      const isExisting = availableFilieres.includes(stagiaire.filiere || stagiaire.programme_code);
-      setShowCustomInput(!isExisting && !!(stagiaire.filiere || stagiaire.programme_code));
-      setFormData({
-        nom: stagiaire.nom || "",
-        prenom: stagiaire.prenom || "",
-        filiere: stagiaire.filiere || stagiaire.programme_code || "",
-        sexe: stagiaire.sexe || "m",
-        matricule: stagiaire.matricule || "",
-      });
-    } else if (profFilieres.length === 1) {
-      setFormData((p) => ({ ...p, filiere: profFilieres[0] }));
-    }
+    const nextFormData = getInitialFormData();
+    const currentFiliere = nextFormData.filiere;
+
+    setFormData(nextFormData);
+    setShowCustomInput(
+      !!currentFiliere && !availableFilieres.includes(currentFiliere),
+    );
+    setErrors({});
   }, [stagiaire, availableFilieres, profFilieres]);
 
   const validate = () => {
