@@ -4,43 +4,55 @@ import StagiaireForm from "../components/StagiaireForm.jsx";
 import StagiaireList from "../components/StagiaireList.jsx";
 import StagiaireDetail from "../components/StagiaireDetail.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
-import { fetchSecteurs, fetchProgrammesBySecteur } from "../store/secteurSlice.jsx";
+import {
+  fetchSecteurs,
+  fetchProgrammesBySecteur,
+} from "../store/secteurSlice.jsx";
 
 const SECTEUR_ICONS = {
   DIA: "bi-cpu-fill",
-  GE:  "bi-lightning-charge-fill",
+  GE: "bi-lightning-charge-fill",
   BTP: "bi-building-fill",
-  GC:  "bi-compass-fill",
-  TH:  "bi-cup-hot-fill",
-  FGT: "bi-tree-fill",
+  GC: "bi-compass-fill",
+  TH: "bi-cup-hot-fill",
+  FGT: "bi-snow",
   AGC: "bi-bar-chart-fill",
 };
 const SECTEUR_COLORS = {
   DIA: { bg: "#eff6ff", color: "#2563eb" },
-  GE:  { bg: "#fffbeb", color: "#d97706" },
+  GE: { bg: "#fffbeb", color: "#d97706" },
   BTP: { bg: "#f0fdf4", color: "#16a34a" },
-  GC:  { bg: "#fdf4ff", color: "#9333ea" },
-  TH:  { bg: "#fff7ed", color: "#ea580c" },
-  FGT: { bg: "#f0fdf4", color: "#15803d" },
+  GC: { bg: "#fdf4ff", color: "#9333ea" },
+  TH: { bg: "#fff7ed", color: "#ea580c" },
+  FGT: { bg: "#ecfeff", color: "#0891b2" },
   AGC: { bg: "#eff6ff", color: "#1d4ed8" },
 };
-const defaultIcon  = "bi-grid-fill";
-const defaultColor = { bg: "var(--color-primary-light)", color: "var(--color-primary)" };
+const defaultIcon = "bi-grid-fill";
+const defaultColor = {
+  bg: "var(--color-primary-light)",
+  color: "var(--color-primary)",
+};
 
 function StagiairesPage() {
   const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
   const isProf = user?.role === "prof";
 
-  const { items: stagiaires, loading: loadingStagiaires } = useSelector((s) => s.stagiaires);
-  const { items: secteurs, programmesBySecteur, loading: loadingSecteurs, loadingProgrammes } =
-    useSelector((s) => s.secteurs);
+  const { items: stagiaires, loading: loadingStagiaires } = useSelector(
+    (s) => s.stagiaires,
+  );
+  const {
+    items: secteurs,
+    programmesBySecteur,
+    loading: loadingSecteurs,
+    loadingProgrammes,
+  } = useSelector((s) => s.secteurs);
 
-  const [selectedSecteur,   setSelectedSecteur]   = useState(null);
+  const [selectedSecteur, setSelectedSecteur] = useState(null);
   const [selectedProgramme, setSelectedProgramme] = useState(null);
   const [selectedStagiaire, setSelectedStagiaire] = useState(null);
-  const [showForm,          setShowForm]           = useState(false);
-  const [editingStagiaire,  setEditingStagiaire]   = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingStagiaire, setEditingStagiaire] = useState(null);
 
   useEffect(() => {
     dispatch(fetchStagiaires());
@@ -54,26 +66,45 @@ function StagiairesPage() {
   }, [selectedSecteur, programmesBySecteur, dispatch]);
 
   const profCodes = useMemo(
-    () => (isProf && user?.programmes ? user.programmes.map((p) => p.code_diplome) : []),
-    [isProf, user]
+    () =>
+      isProf && user?.programmes
+        ? user.programmes.map((p) => p.code_diplome)
+        : [],
+    [isProf, user],
   );
 
   const currentProgrammes = useMemo(() => {
     if (!selectedSecteur) return [];
     const all = programmesBySecteur[selectedSecteur.id] || [];
-    return profCodes.length > 0 ? all.filter((p) => profCodes.includes(p.code_diplome)) : all;
+    return profCodes.length > 0
+      ? all.filter((p) => profCodes.includes(p.code_diplome))
+      : all;
   }, [selectedSecteur, programmesBySecteur, profCodes]);
 
-  const handleEdit   = (s) => { setEditingStagiaire(s); setShowForm(true); };
-  const handleAddNew = ()  => { setEditingStagiaire(null); setShowForm(true); };
-  const handleSave   = ()  => { setShowForm(false); setEditingStagiaire(null); dispatch(fetchStagiaires()); };
+  const handleEdit = (s) => {
+    setEditingStagiaire(s);
+    setShowForm(true);
+  };
+  const handleAddNew = () => {
+    setEditingStagiaire(null);
+    setShowForm(true);
+  };
+  const handleSave = () => {
+    setShowForm(false);
+    setEditingStagiaire(null);
+    dispatch(fetchStagiaires());
+  };
 
   const isLoading = loadingStagiaires || loadingSecteurs;
 
   if (isLoading && stagiaires.length === 0 && secteurs.length === 0) {
     return (
       <div className="container-xxl px-4 py-5 text-center">
-        <div className="spinner-border" style={{ color: "var(--color-primary)" }} role="status" />
+        <div
+          className="spinner-border"
+          style={{ color: "var(--color-primary)" }}
+          role="status"
+        />
         <p className="mt-3 body-sm">Chargement…</p>
       </div>
     );
@@ -81,7 +112,6 @@ function StagiairesPage() {
 
   return (
     <div className="container-xxl px-4 py-5">
-
       {/* ── Page header ── */}
       <div className="d-flex justify-content-between align-items-start mb-5 flex-wrap gap-3">
         <div>
@@ -96,7 +126,10 @@ function StagiairesPage() {
             <ol className="breadcrumb mb-0 small">
               <li
                 className={`breadcrumb-item ${!selectedSecteur ? "active" : "bc-link"}`}
-                onClick={() => { setSelectedSecteur(null); setSelectedProgramme(null); }}
+                onClick={() => {
+                  setSelectedSecteur(null);
+                  setSelectedProgramme(null);
+                }}
               >
                 Secteurs
               </li>
@@ -118,7 +151,9 @@ function StagiairesPage() {
               )}
               {selectedStagiaire && (
                 <li className="breadcrumb-item active">
-                  {selectedStagiaire.prenom ? `${selectedStagiaire.prenom} ${selectedStagiaire.nom}` : selectedStagiaire.nomComplet || selectedStagiaire.nom}
+                  {selectedStagiaire.prenom
+                    ? `${selectedStagiaire.prenom} ${selectedStagiaire.nom}`
+                    : selectedStagiaire.nomComplet || selectedStagiaire.nom}
                 </li>
               )}
             </ol>
@@ -126,7 +161,10 @@ function StagiairesPage() {
         </div>
 
         {user?.role === "admin" && !showForm && selectedProgramme && (
-          <button className="btn-navy d-flex align-items-center gap-2" onClick={handleAddNew}>
+          <button
+            className="btn-navy d-flex align-items-center gap-2"
+            onClick={handleAddNew}
+          >
             <i className="bi bi-plus-lg"></i>
             Nouveau Stagiaire
           </button>
@@ -139,30 +177,30 @@ function StagiairesPage() {
           <div className="col-lg-6">
             <StagiaireForm
               stagiaire={editingStagiaire}
-              onCancel={() => { setShowForm(false); setEditingStagiaire(null); }}
+              onCancel={() => {
+                setShowForm(false);
+                setEditingStagiaire(null);
+              }}
               onSave={handleSave}
             />
           </div>
         </div>
-
-      /* ── Level 4: stagiaire detail ── */
-      ) : selectedStagiaire ? (
+      ) : /* ── Level 4: stagiaire detail ── */
+      selectedStagiaire ? (
         <StagiaireDetail
           stagiaire={selectedStagiaire}
           onBack={() => setSelectedStagiaire(null)}
         />
-
-      /* ── Level 3: stagiaire list ── */
-      ) : selectedProgramme ? (
+      ) : /* ── Level 3: stagiaire list ── */
+      selectedProgramme ? (
         <StagiaireList
           onEdit={handleEdit}
           onView={(s) => setSelectedStagiaire(s)}
           filiere={selectedProgramme}
           onBack={() => setSelectedProgramme(null)}
         />
-
-      /* ── Level 2: programmes ── */
-      ) : selectedSecteur ? (
+      ) : /* ── Level 2: programmes ── */
+      selectedSecteur ? (
         <div>
           <button
             className="btn-navy-outline d-inline-flex align-items-center gap-2 mb-5"
@@ -173,7 +211,11 @@ function StagiairesPage() {
 
           {loadingProgrammes ? (
             <div className="text-center py-5">
-              <div className="spinner-border" style={{ color: "var(--color-primary)" }} role="status" />
+              <div
+                className="spinner-border"
+                style={{ color: "var(--color-primary)" }}
+                role="status"
+              />
             </div>
           ) : currentProgrammes.length === 0 ? (
             <div className="text-center py-5 body-sm">
@@ -192,48 +234,51 @@ function StagiairesPage() {
                       <i className="bi bi-mortarboard fs-3"></i>
                     </div>
                     <div className="section-title mb-1">{p.code_diplome}</div>
-                    <div className="body-sm">{p.inscriptions_count || 0} Stagiaires</div>
+                    <div className="body-sm">
+                      {p.inscriptions_count || 0} Stagiaires
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
-
-      /* ── Level 1: secteurs ── */
       ) : (
+        /* ── Level 1: secteurs ── */
         <div className="row g-4">
           {secteurs.length === 0 ? (
             <div className="col-12 text-center py-5 body-sm">
               <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
               Aucun secteur enregistré.
             </div>
-          ) : secteurs.map((sec) => {
-            const icon  = SECTEUR_ICONS[sec.code]  || defaultIcon;
-            const color = SECTEUR_COLORS[sec.code] || defaultColor;
-            return (
-              <div key={sec.id} className="col-md-4 col-lg-3">
-                <div
-                  className="card-premium card-clickable secteur-card text-center p-4"
-                  onClick={() => setSelectedSecteur(sec)}
-                >
+          ) : (
+            secteurs.map((sec) => {
+              const icon = SECTEUR_ICONS[sec.code] || defaultIcon;
+              const color = SECTEUR_COLORS[sec.code] || defaultColor;
+              return (
+                <div key={sec.id} className="col-md-4 col-lg-3">
                   <div
-                    className="secteur-icon-wrap mb-3"
-                    style={{ background: color.bg, color: color.color }}
+                    className="card-premium card-clickable secteur-card text-center p-4"
+                    onClick={() => setSelectedSecteur(sec)}
                   >
-                    <i className={`bi ${icon} fs-2`}></i>
-                  </div>
-                  <div className="section-title mb-1">{sec.code}</div>
-                  <div className="body-sm">
-                    {sec.programmes_count} Classe{sec.programmes_count !== 1 ? "s" : ""}
+                    <div
+                      className="secteur-icon-wrap mb-3"
+                      style={{ background: color.bg, color: color.color }}
+                    >
+                      <i className={`bi ${icon} fs-2`}></i>
+                    </div>
+                    <div className="section-title mb-1">{sec.code}</div>
+                    <div className="body-sm">
+                      {sec.programmes_count} Classe
+                      {sec.programmes_count !== 1 ? "s" : ""}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       )}
-
     </div>
   );
 }

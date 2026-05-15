@@ -8,34 +8,49 @@ function CalendarHistory() {
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const { user } = useSelector((state) => state.auth);
 
-  const isProf = user?.role === 'prof';
-  const profFilieres = useMemo(() =>
-    isProf && user?.programmes?.length > 0
-      ? user.programmes.map((p) => p.code_diplome)
-      : [],
-    [isProf, user]
+  const isProf = user?.role === "prof";
+  const profFilieres = useMemo(
+    () =>
+      isProf && user?.programmes?.length > 0
+        ? user.programmes.map((p) => p.code_diplome)
+        : [],
+    [isProf, user],
   );
 
   const getStagiaireClasse = (s) =>
-    (s.programmes || [])[0]?.code_diplome || s.filiere || s.programme_code || "";
+    (s.programmes || [])[0]?.code_diplome ||
+    s.filiere ||
+    s.programme_code ||
+    "";
 
   const [dateRange, setDateRange] = useState(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 7);
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday...
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+
+    const start = new Date(now);
+    start.setDate(now.getDate() + diffToMonday);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 5); // Monday + 5 days = Saturday
+
     return [start, end];
   });
   const [showCalendar, setShowCalendar] = useState(false);
 
   const filieres = useMemo(() => {
-    const all = [...new Set(stagiaires.map(getStagiaireClasse).filter(Boolean))].sort();
+    const all = [
+      ...new Set(stagiaires.map(getStagiaireClasse).filter(Boolean)),
+    ].sort();
     if (profFilieres.length > 0) {
-      return all.filter(f => profFilieres.includes(f));
+      return all.filter((f) => profFilieres.includes(f));
     }
     return all;
   }, [stagiaires, profFilieres]);
 
-  const [filiere, setFiliere] = useState(profFilieres.length === 1 ? profFilieres[0] : "");
+  const [filiere, setFiliere] = useState(
+    profFilieres.length === 1 ? profFilieres[0] : "",
+  );
 
   const filteredStagiaires = useMemo(() => {
     if (!filiere) return [];
@@ -74,9 +89,13 @@ function CalendarHistory() {
     const map = {};
     absences.forEach((a) => {
       const sid = a.idstag ?? a.stagiaire_id;
-      const date = a.date ?? a.session?.date_session ?? "";
-      if (!sid || !date) return;
-      const key = `${sid}_${date}`;
+      const dateRaw = a.date ?? a.session?.date_session ?? "";
+      if (!sid || !dateRaw) return;
+
+      // Keep only YYYY-MM-DD from possible datetime strings
+      const dateStr = String(dateRaw).split("T")[0].split(" ")[0];
+
+      const key = `${sid}_${dateStr}`;
       if (!map[key]) map[key] = [];
       map[key].push(a);
     });
@@ -89,7 +108,10 @@ function CalendarHistory() {
         <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
           <h5 className="section-title mb-0 d-flex align-items-center gap-3">
             <span className="avatar-circle avatar-md avatar-navy">
-              <i className="bi bi-calendar3-range-fill" style={{ fontSize: "0.85rem" }}></i>
+              <i
+                className="bi bi-calendar3-range-fill"
+                style={{ fontSize: "0.85rem" }}
+              ></i>
             </span>
             Historique du Calendrier
           </h5>
@@ -97,7 +119,9 @@ function CalendarHistory() {
         <div className="card-body p-3">
           <div className="row g-3 align-items-end">
             <div className="col-12 col-sm-5">
-              <label className="form-label label-caps mb-1">Classe / Filière</label>
+              <label className="form-label label-caps mb-1">
+                Classe / Filière
+              </label>
               <div className="input-group input-group-sm">
                 <span className="input-group-text bg-light border-end-0">
                   <i className="bi bi-mortarboard-fill text-dark-navy"></i>
@@ -109,13 +133,17 @@ function CalendarHistory() {
                 >
                   <option value="">Sélectionner une filière</option>
                   {filieres.map((f, i) => (
-                    <option key={i} value={f}>{f}</option>
+                    <option key={i} value={f}>
+                      {f}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
             <div className="col-12 col-sm-7 position-relative">
-              <label className="form-label label-caps mb-1">Période d'appel</label>
+              <label className="form-label label-caps mb-1">
+                Période d'appel
+              </label>
               <button
                 className="btn btn-white border bg-light btn-sm w-100 d-flex justify-content-between align-items-center shadow-none text-start py-2"
                 onClick={() => setShowCalendar(!showCalendar)}
@@ -124,11 +152,17 @@ function CalendarHistory() {
               >
                 <span className="text-dark text-truncate">
                   <i className="bi bi-calendar-range me-2 text-dark-navy"></i>
-                  {dateRange?.[0] ? dateRange[0].toLocaleDateString("fr-FR") : "Début"}
+                  {dateRange?.[0]
+                    ? dateRange[0].toLocaleDateString("fr-FR")
+                    : "Début"}
                   <span className="mx-1 text-muted">➟</span>
-                  {dateRange?.[1] ? dateRange[1].toLocaleDateString("fr-FR") : "Fin"}
+                  {dateRange?.[1]
+                    ? dateRange[1].toLocaleDateString("fr-FR")
+                    : "Fin"}
                 </span>
-                <i className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted ms-2`}></i>
+                <i
+                  className={`bi bi-chevron-${showCalendar ? "up" : "down"} text-muted ms-2`}
+                ></i>
               </button>
               {showCalendar && (
                 <div
@@ -136,13 +170,22 @@ function CalendarHistory() {
                   style={{ minWidth: "350px", zIndex: 1050 }}
                 >
                   <div className="d-flex justify-content-between align-items-center mb-2 px-1">
-                    <span className="fw-bold small text-muted" style={{ fontSize: "0.7rem" }}>CHOISIR LA PLAGE</span>
-                    <button className="btn-close btn-sm" onClick={() => setShowCalendar(false)}></button>
+                    <span
+                      className="fw-bold small text-muted"
+                      style={{ fontSize: "0.7rem" }}
+                    >
+                      CHOISIR LA PLAGE
+                    </span>
+                    <button
+                      className="btn-close btn-sm"
+                      onClick={() => setShowCalendar(false)}
+                    ></button>
                   </div>
                   <Calendar
                     onChange={(val) => {
                       setDateRange(val);
-                      if (val && val.length === 2 && val[0] && val[1]) setShowCalendar(false);
+                      if (val && val.length === 2 && val[0] && val[1])
+                        setShowCalendar(false);
                     }}
                     selectRange={true}
                     value={dateRange}
@@ -156,9 +199,20 @@ function CalendarHistory() {
 
         {dateColumns.length > 0 && filiere ? (
           filteredStagiaires.length > 0 ? (
-            <div className="table-responsive scroll-thin" style={{ maxHeight: "65vh", overflowY: "auto" }}>
+            <div
+              className="table-responsive scroll-thin"
+              style={{ maxHeight: "65vh", overflowY: "auto" }}
+            >
               <table className="table table-sm mb-0 align-middle cal-grid">
-                <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 var(--color-border), 0 2px 0 var(--color-border-strong)" }}>
+                <thead
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 20,
+                    boxShadow:
+                      "inset 0 2px 0 var(--color-border), 0 2px 0 var(--color-border-strong)",
+                  }}
+                >
                   <tr>
                     <th
                       className="ps-4 cal-sticky-col"
@@ -175,8 +229,14 @@ function CalendarHistory() {
                         <div className="label-caps lh-1 mb-1">
                           {d.toLocaleDateString("fr-FR", { weekday: "short" })}
                         </div>
-                        <div className="fw-600 text-dark" style={{ fontSize: "0.8rem" }}>
-                          {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
+                        <div
+                          className="fw-600 text-dark"
+                          style={{ fontSize: "0.8rem" }}
+                        >
+                          {d.toLocaleDateString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                          })}
                         </div>
                       </th>
                     ))}
@@ -186,7 +246,9 @@ function CalendarHistory() {
                   {filteredStagiaires.map((stagiaire) => (
                     <tr key={stagiaire.id} className="cal-hover-row">
                       <td className="ps-4 fw-600 cal-sticky-col cal-name-col">
-                        {stagiaire.prenom ? `${stagiaire.prenom} ${stagiaire.nom}` : stagiaire.nomComplet || stagiaire.nom}
+                        {stagiaire.prenom
+                          ? `${stagiaire.prenom} ${stagiaire.nom}`
+                          : stagiaire.nomComplet || stagiaire.nom}
                       </td>
                       {dateColumns.map((d, dIdx) => {
                         const dateStr = formatStoreDate(d);
@@ -198,7 +260,9 @@ function CalendarHistory() {
                         );
                         const allJustified =
                           dayAbsences.length > 0 &&
-                          dayAbsences.every((a) => a.justifie ?? !!a.justification);
+                          dayAbsences.every(
+                            (a) => a.justifie ?? !!a.justification,
+                          );
 
                         let cellClass = "";
                         let cellContent = null;
@@ -245,7 +309,6 @@ function CalendarHistory() {
           </div>
         )}
       </div>
-
     </>
   );
 }
