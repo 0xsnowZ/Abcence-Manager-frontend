@@ -87,6 +87,7 @@ const stagiaireSlice = createSlice({
     items: [],
     loading: false,
     error: null,
+    lastFetched: null, // PERF-01: timestamp for cache guard
   },
   reducers: {
     setStagiaires: (state, action) => {
@@ -103,6 +104,7 @@ const stagiaireSlice = createSlice({
       .addCase(fetchStagiaires.fulfilled, (state, action) => {
         state.loading = false;
         state.items = action.payload;
+        state.lastFetched = Date.now(); // PERF-01: record fetch time
       })
 
       .addCase(fetchStagiaires.rejected, (state, action) => {
@@ -114,7 +116,8 @@ const stagiaireSlice = createSlice({
     builder
       .addCase(createStagiaire.pending, (state) => { state.error = null; })
       .addCase(createStagiaire.fulfilled, (state, action) => {
-        state.items.push(action.payload);
+        // BUG-08: Normalize so nomComplet, filiere, etc. are set correctly
+        state.items.push(normalizeStagiaire(action.payload));
       })
       .addCase(createStagiaire.rejected, (state, action) => {
         state.error = action.payload;
@@ -124,8 +127,9 @@ const stagiaireSlice = createSlice({
     builder
       .addCase(updateStagiaire.pending, (state) => { state.error = null; })
       .addCase(updateStagiaire.fulfilled, (state, action) => {
-        const idx = state.items.findIndex((s) => s.id === action.payload.id);
-        if (idx !== -1) state.items[idx] = action.payload;
+        const normalized = normalizeStagiaire(action.payload); // BUG-08
+        const idx = state.items.findIndex((s) => s.id === normalized.id);
+        if (idx !== -1) state.items[idx] = normalized;
       })
       .addCase(updateStagiaire.rejected, (state, action) => {
         state.error = action.payload;

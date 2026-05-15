@@ -32,33 +32,21 @@ export const fetchSessionsByProgramme = createAsyncThunk(
 );
 
 /**
- * Find or create a session for a given (programme_id, date_session, time_block_id).
- * Returns the session object.
+ * BUG-01: Find or create a session using the new atomic backend endpoint.
+ * Replaces the old 2-call pattern (GET all sessions + conditionally POST)
+ * with a single POST that handles the find-or-create atomically in a DB transaction.
  */
 export const findOrCreateSession = createAsyncThunk(
   "sessions/findOrCreate",
   async ({ programme_id, date_session, time_block_id, created_by }, { rejectWithValue }) => {
     try {
-      // Try to find existing session
-      const listResp = await api.get(`/programmes/${programme_id}/sessions`, {
-        params: { per_page: 500 },
-      });
-      const sessions = listResp.data.data.data ?? listResp.data.data;
-      const existing = sessions.find(
-        (s) =>
-          s.date_session?.slice(0, 10) === date_session &&
-          s.time_block_id === time_block_id
-      );
-      if (existing) return existing;
-
-      // Create new session
-      const createResp = await api.post("/sessions", {
+      const response = await api.post("/sessions/find-or-create", {
         classe_id: programme_id,
         date_session,
         time_block_id,
         created_by: created_by ? String(created_by) : null,
       });
-      return createResp.data.data;
+      return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de création de session");
     }
