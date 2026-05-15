@@ -225,17 +225,16 @@ function AbsenceForm({ absence, onCancel, onSave }) {
                 Statut de l'Absence
               </label>
               <div className="d-flex align-items-center gap-2 flex-wrap">
-                <span className={`badge py-2 px-3 ${
-                  formData.status === "non_justifie" ? "bg-danger" :
-                  formData.status === "justifie" ? "bg-success" :
-                  formData.status === "retard" ? "bg-warning" :
-                  "bg-info"
-                }`}>
+                <span className={`badge py-2 px-3 ${formData.status === "non_justifie" ? "bg-danger" :
+                    formData.status === "justifie" ? "bg-success" :
+                      formData.status === "retard" ? "bg-warning" :
+                        "bg-info"
+                  }`}>
                   <i className="bi bi-circle-fill me-2" style={{ fontSize: "0.5rem" }}></i>
                   {formData.status === "non_justifie" ? "Non justifiée" :
-                   formData.status === "justifie" ? "Justifiée" :
-                   formData.status === "retard" ? "Retard" :
-                   "Absence excusée"}
+                    formData.status === "justifie" ? "Justifiée" :
+                      formData.status === "retard" ? "Retard" :
+                        "Absence excusée"}
                 </span>
                 {user?.role === "admin" && (
                   <small className="text-muted fw-normal">
