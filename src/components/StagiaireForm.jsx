@@ -5,7 +5,13 @@ import { useToast } from "./ToastProvider.jsx";
 
 const NEW_FILIERE_KEY = "__new__";
 
-function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes = [] }) {
+function StagiaireForm({
+  stagiaire,
+  onCancel,
+  onSave,
+  filieres = [],
+  programmes = [],
+}) {
   const dispatch = useDispatch();
   const showToast = useToast();
   const { user } = useSelector((state) => state.auth);
@@ -15,11 +21,12 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
       isProf && user?.programmes?.length > 0
         ? user.programmes.map((p) => p.code_diplome)
         : [],
-    [isProf, user]
+    [isProf, user],
   );
 
   const availableFilieres = useMemo(() => {
-    if (profFilieres.length > 0) return filieres.filter((f) => profFilieres.includes(f));
+    if (profFilieres.length > 0)
+      return filieres.filter((f) => profFilieres.includes(f));
     return filieres;
   }, [filieres, profFilieres]);
 
@@ -66,7 +73,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
     setSaving(true);
 
     // Find programme_id from filiere code
-    const programme = programmes.find((p) => p.code_diplome === formData.filiere);
+    const programme = programmes.find(
+      (p) => p.code_diplome === formData.filiere,
+    );
 
     const payload = {
       nom: formData.nom,
@@ -80,7 +89,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
     try {
       if (stagiaire) {
-        await dispatch(updateStagiaire({ id: stagiaire.id, ...payload })).unwrap();
+        await dispatch(
+          updateStagiaire({ id: stagiaire.id, ...payload }),
+        ).unwrap();
         showToast("Stagiaire mis à jour avec succès.", "success");
       } else {
         await dispatch(createStagiaire(payload)).unwrap();
@@ -115,7 +126,10 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
 
   return (
     <div className="card-premium overflow-hidden">
-      <div className="card-header py-3 px-4" style={{ background: "var(--color-primary)" }}>
+      <div
+        className="card-header py-3 px-4"
+        style={{ background: "var(--color-primary)" }}
+      >
         <h5 className="mb-0 label-caps text-white d-flex align-items-center gap-2">
           <i className="bi bi-person-plus-fill"></i>
           {stagiaire ? "Modifier le Profil" : "Nouveau Stagiaire"}
@@ -123,7 +137,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
       </div>
       <div className="card-body p-4">
         {errors.submit && (
-          <div className="alert alert-danger py-2 small mb-3">{errors.submit}</div>
+          <div className="alert alert-danger py-2 small mb-3">
+            {errors.submit}
+          </div>
         )}
         <form onSubmit={handleSubmit}>
           {/* Matricule */}
@@ -140,9 +156,12 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                 value={formData.matricule}
                 onChange={handleChange}
                 placeholder="Ex: 12345"
+                disabled={!!stagiaire}
               />
             </div>
-            {errors.matricule && <div className="text-danger small mt-1">{errors.matricule}</div>}
+            {errors.matricule && (
+              <div className="text-danger small mt-1">{errors.matricule}</div>
+            )}
           </div>
 
           {/* Prénom */}
@@ -161,7 +180,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                 placeholder="Ex: Ahmed"
               />
             </div>
-            {errors.prenom && <div className="text-danger small mt-1">{errors.prenom}</div>}
+            {errors.prenom && (
+              <div className="text-danger small mt-1">{errors.prenom}</div>
+            )}
           </div>
 
           {/* Nom */}
@@ -180,7 +201,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                 placeholder="Ex: Alami"
               />
             </div>
-            {errors.nom && <div className="text-danger small mt-1">{errors.nom}</div>}
+            {errors.nom && (
+              <div className="text-danger small mt-1">{errors.nom}</div>
+            )}
           </div>
 
           {/* Filière */}
@@ -198,9 +221,15 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
               >
                 <option value="">-- Sélectionner une filière --</option>
                 {availableFilieres.map((f) => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f}>
+                    {f}
+                  </option>
                 ))}
-                {!isProf && <option value={NEW_FILIERE_KEY}>✏️ Nouvelle filière...</option>}
+                {!isProf && (
+                  <option value={NEW_FILIERE_KEY}>
+                    ✏️ Nouvelle filière...
+                  </option>
+                )}
               </select>
             </div>
             {showCustomInput && !isProf && (
@@ -219,7 +248,9 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                 />
               </div>
             )}
-            {errors.filiere && <div className="text-danger small mt-1">{errors.filiere}</div>}
+            {errors.filiere && (
+              <div className="text-danger small mt-1">{errors.filiere}</div>
+            )}
           </div>
 
           {/* Genre */}
@@ -237,7 +268,8 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                   onChange={handleChange}
                 />
                 <label className="form-check-label fw-medium" htmlFor="sexeM">
-                  <i className="bi bi-gender-male me-1 text-dark-navy"></i>Masculin
+                  <i className="bi bi-gender-male me-1 text-dark-navy"></i>
+                  Masculin
                 </label>
               </div>
               <div className="form-check custom-radio">
@@ -251,7 +283,8 @@ function StagiaireForm({ stagiaire, onCancel, onSave, filieres = [], programmes 
                   onChange={handleChange}
                 />
                 <label className="form-check-label fw-medium" htmlFor="sexeF">
-                  <i className="bi bi-gender-female me-1 text-danger"></i>Féminin
+                  <i className="bi bi-gender-female me-1 text-danger"></i>
+                  Féminin
                 </label>
               </div>
             </div>
