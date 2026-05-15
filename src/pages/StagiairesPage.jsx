@@ -182,6 +182,8 @@ function StagiairesPage() {
                 setEditingStagiaire(null);
               }}
               onSave={handleSave}
+              filieres={currentProgrammes.map((p) => p.code_diplome)}
+              programmes={currentProgrammes}
             />
           </div>
         </div>

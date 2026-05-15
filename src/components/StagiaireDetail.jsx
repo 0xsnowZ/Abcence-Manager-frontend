@@ -1,26 +1,52 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSelector } from "react-redux";
 import {
-  AreaChart, Area, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
 } from "recharts";
 
-const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+const MONTH_NAMES = [
+  "Jan",
+  "Fév",
+  "Mar",
+  "Avr",
+  "Mai",
+  "Jun",
+  "Jul",
+  "Aoû",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Déc",
+];
 
-const getStagId   = (a) => a.idstag ?? a.stagiaire_id;
+const getStagId = (a) => a.idstag ?? a.stagiaire_id;
 const isJustified = (a) => a.justifie ?? !!a.justification;
-const getHours    = (a) => a.heures ?? 2.5;
+const getHours = (a) => a.heures ?? 2.5;
 
-const PIE_COLOR = { "Justifiées": "#10b981", "Non justifiées": "#ef4444" };
+const PIE_COLOR = { Justifiées: "#10b981", "Non justifiées": "#ef4444" };
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card-premium p-3" style={{ fontSize: "0.8rem", minWidth: 140 }}>
+    <div
+      className="card-premium p-3"
+      style={{ fontSize: "0.8rem", minWidth: 140 }}
+    >
       {label && <p className="fw-semibold mb-1">{label}</p>}
       {payload.map((e, i) => (
-        <p key={i} style={{ color: e.color, margin: 0 }}>{e.name}: <strong>{e.value}</strong></p>
+        <p key={i} style={{ color: e.color, margin: 0 }}>
+          {e.name}: <strong>{e.value}</strong>
+        </p>
       ))}
     </div>
   );
@@ -30,21 +56,23 @@ function StagiaireDetail({ stagiaire, onBack }) {
   const rawAbsences = useSelector((s) => s.absences.items);
 
   const stagAbsences = useMemo(
-    () => rawAbsences
-      .filter((a) => getStagId(a) === stagiaire.id)
-      .map((a) => ({
-        ...a,
-        date: a.date ?? a.session?.date_session ?? "",
-        heures: a.heures ?? 2.5,
-        justifie: a.justifie ?? !!a.justification,
-      })),
-    [rawAbsences, stagiaire.id]
+    () =>
+      rawAbsences
+        .filter((a) => getStagId(a) === stagiaire.id)
+        .map((a) => ({
+          ...a,
+          date: a.date ?? a.session?.date_session ?? "",
+          heures: a.heures ?? 2.5,
+          justifie: a.justifie ?? !!a.justification,
+        })),
+    [rawAbsences, stagiaire.id],
   );
 
-  const totalAbsences  = stagAbsences.length;
-  const totalHeures    = stagAbsences.reduce((s, a) => s + getHours(a), 0);
+  const totalAbsences = stagAbsences.length;
+  const totalHeures = stagAbsences.reduce((s, a) => s + getHours(a), 0);
   const justifiedCount = stagAbsences.filter(isJustified).length;
-  const tauxJustif     = totalAbsences > 0 ? Math.round((justifiedCount / totalAbsences) * 100) : 0;
+  const tauxJustif =
+    totalAbsences > 0 ? Math.round((justifiedCount / totalAbsences) * 100) : 0;
 
   const trendData = useMemo(() => {
     const map = {};
@@ -64,33 +92,45 @@ function StagiaireDetail({ stagiaire, onBack }) {
   }, [stagAbsences]);
 
   const pieData = [
-    { name: "Justifiées",    value: justifiedCount },
+    { name: "Justifiées", value: justifiedCount },
     { name: "Non justifiées", value: totalAbsences - justifiedCount },
   ].filter((d) => d.value > 0);
 
   const sortedAbsences = [...stagAbsences].sort(
-    (a, b) => new Date(b.date) - new Date(a.date)
+    (a, b) => new Date(b.date) - new Date(a.date),
   );
 
   const displayName = stagiaire.prenom
     ? `${stagiaire.prenom} ${stagiaire.nom}`
     : stagiaire.nomComplet || stagiaire.nom || "—";
 
-  const filiere = (stagiaire.programmes || [])[0]?.code_diplome || stagiaire.filiere || "—";
+  const filiere =
+    (stagiaire.programmes || [])[0]?.code_diplome || stagiaire.filiere || "—";
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentAbsences = sortedAbsences.slice(
+    indexOfFirstItem,
+    indexOfLastItem,
+  );
+  const totalPages = Math.ceil(sortedAbsences.length / itemsPerPage);
 
   return (
     <div className="anim-fade-in">
-
       {/* ── Header card ── */}
       <div className="card-premium p-4 mb-4">
         <div className="d-flex align-items-center gap-4 flex-wrap">
           <div
             className="avatar-circle avatar-xl flex-shrink-0"
             style={{
-              background: ["f","F"].includes(stagiaire.sexe)
-                ? "var(--color-danger-light)" : "var(--color-primary-light)",
-              color: ["f","F"].includes(stagiaire.sexe)
-                ? "var(--color-danger)" : "var(--color-primary)",
+              background: ["f", "F"].includes(stagiaire.sexe)
+                ? "var(--color-danger-light)"
+                : "var(--color-primary-light)",
+              color: ["f", "F"].includes(stagiaire.sexe)
+                ? "var(--color-danger)"
+                : "var(--color-primary)",
               fontSize: "1.6rem",
             }}
           >
@@ -101,21 +141,35 @@ function StagiaireDetail({ stagiaire, onBack }) {
             <div className="d-flex flex-wrap gap-2 align-items-center">
               <span className="badge-soft badge-soft-primary">{filiere}</span>
               <span className="badge-soft badge-soft-info">
-                <i className={`bi bi-gender-${["f","F"].includes(stagiaire.sexe) ? "female" : "male"} me-1`}></i>
-                {["f","F"].includes(stagiaire.sexe) ? "Féminin" : "Masculin"}
+                <i
+                  className={`bi bi-gender-${["f", "F"].includes(stagiaire.sexe) ? "female" : "male"} me-1`}
+                ></i>
+                {["f", "F"].includes(stagiaire.sexe) ? "Féminin" : "Masculin"}
               </span>
               {stagiaire.matricule && (
-                <span className="body-sm"><i className="bi bi-hash me-1 opacity-50"></i>{stagiaire.matricule}</span>
+                <span className="body-sm">
+                  <i className="bi bi-hash me-1 opacity-50"></i>
+                  {stagiaire.matricule}
+                </span>
               )}
               {stagiaire.cin && (
-                <span className="body-sm"><i className="bi bi-card-text me-1 opacity-50"></i>{stagiaire.cin}</span>
+                <span className="body-sm">
+                  <i className="bi bi-card-text me-1 opacity-50"></i>
+                  {stagiaire.cin}
+                </span>
               )}
               {stagiaire.telephone && (
-                <span className="body-sm"><i className="bi bi-telephone me-1 opacity-50"></i>{stagiaire.telephone}</span>
+                <span className="body-sm">
+                  <i className="bi bi-telephone me-1 opacity-50"></i>
+                  {stagiaire.telephone}
+                </span>
               )}
             </div>
           </div>
-          <button className="btn-navy-outline d-flex align-items-center gap-2" onClick={onBack}>
+          <button
+            className="btn-navy-outline d-flex align-items-center gap-2"
+            onClick={onBack}
+          >
             <i className="bi bi-arrow-left"></i>Retour
           </button>
         </div>
@@ -144,7 +198,9 @@ function StagiaireDetail({ stagiaire, onBack }) {
             <i className="bi bi-shield-check kpi-bg-icon"></i>
             <div className="kpi-label">Taux Justification</div>
             <div className="kpi-number">{tauxJustif}%</div>
-            <div className="kpi-sub">{justifiedCount} justifiée{justifiedCount !== 1 ? "s" : ""}</div>
+            <div className="kpi-sub">
+              {justifiedCount} justifiée{justifiedCount !== 1 ? "s" : ""}
+            </div>
           </div>
         </div>
       </div>
@@ -159,28 +215,70 @@ function StagiaireDetail({ stagiaire, onBack }) {
                 <h6 className="section-title mb-4">Évolution par jour</h6>
                 {trendData.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={trendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart
+                      data={trendData}
+                      margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
+                    >
                       <defs>
                         <linearGradient id="gJust" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.18} />
-                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                          <stop
+                            offset="5%"
+                            stopColor="#10b981"
+                            stopOpacity={0.18}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#10b981"
+                            stopOpacity={0}
+                          />
                         </linearGradient>
-                        <linearGradient id="gUnjust" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.18} />
-                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                        <linearGradient
+                          id="gUnjust"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#ef4444"
+                            stopOpacity={0.18}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#ef4444"
+                            stopOpacity={0}
+                          />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--color-border)"
+                      />
                       <XAxis dataKey="day" tick={{ fontSize: 10 }} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Area type="monotone" dataKey="Justifiées" stroke="#10b981" fill="url(#gJust)" strokeWidth={2} />
-                      <Area type="monotone" dataKey="Non just." stroke="#ef4444" fill="url(#gUnjust)" strokeWidth={2} />
+                      <Area
+                        type="monotone"
+                        dataKey="Justifiées"
+                        stroke="#10b981"
+                        fill="url(#gJust)"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="Non just."
+                        stroke="#ef4444"
+                        fill="url(#gUnjust)"
+                        strokeWidth={2}
+                      />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
-                  <div className="text-center py-5 body-sm opacity-50">Pas assez de données</div>
+                  <div className="text-center py-5 body-sm opacity-50">
+                    Pas assez de données
+                  </div>
                 )}
               </div>
             </div>
@@ -193,8 +291,10 @@ function StagiaireDetail({ stagiaire, onBack }) {
                   <PieChart>
                     <Pie
                       data={pieData}
-                      cx="50%" cy="50%"
-                      innerRadius={55} outerRadius={85}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={85}
                       paddingAngle={3}
                       dataKey="value"
                     >
@@ -217,11 +317,16 @@ function StagiaireDetail({ stagiaire, onBack }) {
         <div className="card-header py-3 px-4 d-flex justify-content-between align-items-center">
           <h5 className="section-title mb-0 d-flex align-items-center gap-3">
             <span className="avatar-circle avatar-sm avatar-navy">
-              <i className="bi bi-calendar2-x-fill" style={{ fontSize: "0.75rem" }}></i>
+              <i
+                className="bi bi-calendar2-x-fill"
+                style={{ fontSize: "0.75rem" }}
+              ></i>
             </span>
             Historique des Absences
           </h5>
-          <span className="badge-soft badge-soft-primary">{totalAbsences} enregistrements</span>
+          <span className="badge-soft badge-soft-primary">
+            {totalAbsences} enregistrements
+          </span>
         </div>
         <div className="card-body pt-0">
           {sortedAbsences.length === 0 ? (
@@ -241,15 +346,20 @@ function StagiaireDetail({ stagiaire, onBack }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedAbsences.map((a) => (
+                  {currentAbsences.map((a) => (
                     <tr key={a.id}>
                       <td className="ps-4 fw-medium">
                         <i className="bi bi-calendar3 me-2 opacity-50"></i>
-                        {a.date ? new Date(a.date.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR") : "—"}
+                        {a.date
+                          ? new Date(
+                              a.date.slice(0, 10) + "T00:00:00",
+                            ).toLocaleDateString("fr-FR")
+                          : "—"}
                       </td>
                       <td>
                         <span className="badge bg-light text-dark border rounded-pill px-3">
-                          <i className="bi bi-clock me-1 opacity-60"></i>{getHours(a)}h
+                          <i className="bi bi-clock me-1 opacity-60"></i>
+                          {getHours(a)}h
                         </span>
                       </td>
                       <td className="text-center">
@@ -263,8 +373,13 @@ function StagiaireDetail({ stagiaire, onBack }) {
                           </span>
                         )}
                       </td>
-                      <td className="body-sm text-truncate" style={{ maxWidth: 220 }}>
-                        {a.justification || <span className="opacity-40">—</span>}
+                      <td
+                        className="body-sm text-truncate"
+                        style={{ maxWidth: 220 }}
+                      >
+                        {a.justification || (
+                          <span className="opacity-40">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -272,9 +387,61 @@ function StagiaireDetail({ stagiaire, onBack }) {
               </table>
             </div>
           )}
+
+          {totalPages > 1 && (
+            <div className="d-flex justify-content-between align-items-center p-3 border-top bg-light/50">
+              <span className="body-sm text-muted">
+                Affichage {indexOfFirstItem + 1}-
+                {Math.min(indexOfLastItem, sortedAbsences.length)} sur{" "}
+                {sortedAbsences.length}
+              </span>
+              <nav>
+                <ul className="pagination pagination-sm mb-0 shadow-sm border rounded">
+                  <li
+                    className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+                  >
+                    <button
+                      className="page-link border-0 text-dark"
+                      onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                    >
+                      <i className="bi bi-chevron-left"></i>
+                    </button>
+                  </li>
+                  {[...Array(totalPages)].map((_, i) => (
+                    <li
+                      key={i + 1}
+                      className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                    >
+                      <button
+                        className={`page-link border-0 ${
+                          currentPage === i + 1
+                            ? "bg-dark-navy text-white fw-bold"
+                            : "text-dark"
+                        }`}
+                        onClick={() => setCurrentPage(i + 1)}
+                      >
+                        {i + 1}
+                      </button>
+                    </li>
+                  ))}
+                  <li
+                    className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}
+                  >
+                    <button
+                      className="page-link border-0 text-dark"
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(p + 1, totalPages))
+                      }
+                    >
+                      <i className="bi bi-chevron-right"></i>
+                    </button>
+                  </li>
+                </ul>
+              </nav>
+            </div>
+          )}
         </div>
       </div>
-
     </div>
   );
 }
