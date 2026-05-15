@@ -1,0 +1,19 @@
+services:
+  # ─── React / Vite (Static Site) ───────────────────────────────────────────
+  - type: web
+    name: absence-manager-frontend
+    runtime: static
+    region: frankfurt
+    plan: free
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    routes:
+      # SPA fallback — all routes serve index.html (required for React Router)
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      # Set this to your Render backend URL (e.g. https://absence-manager-backend.onrender.com/api)
+      - key: VITE_API_URL
+        sync: false
