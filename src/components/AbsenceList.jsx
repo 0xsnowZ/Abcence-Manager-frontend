@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { deleteAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
+import AbsenceDetailModal from "./AbsenceDetailModal.jsx";
 import StagiaireDetail from "./StagiaireDetail.jsx";
 
 function AbsenceList({
@@ -20,6 +21,7 @@ function AbsenceList({
   const [searchTerm, setSearchTerm] = useState("");
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [viewingStagiaire, setViewingStagiaire] = useState(null);
+  const [detailAbsence, setDetailAbsence] = useState(null);
 
   // Normalize: backend attendance has stagiaire_id; frontend used idstag
   const absences = rawAbsences.map((a) => ({
@@ -107,6 +109,16 @@ function AbsenceList({
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     return new Date(dateStr).toLocaleDateString("fr-FR");
+  };
+
+  const getStatusColor = (status) => {
+    const colors = {
+      non_justifie: { badge: "bg-danger", icon: "bi-x-circle-fill", label: "Non justifiée" },
+      justifie: { badge: "bg-success", icon: "bi-check-circle-fill", label: "Justifiée" },
+      retard: { badge: "bg-warning", icon: "bi-exclamation-circle-fill", label: "Retard" },
+      absence_excusee: { badge: "bg-info", icon: "bi-info-circle-fill", label: "Absence excusée" },
+    };
+    return colors[status] || colors.non_justifie;
   };
 
   if (viewingStagiaire) {
@@ -211,15 +223,20 @@ function AbsenceList({
                       </span>
                     </td>
                     <td className="text-center">
-                      {absence.justifie ? (
-                        <span className="badge-soft badge-soft-success">
-                          <i className="bi bi-check-circle-fill"></i>Justifiée
-                        </span>
-                      ) : (
-                        <span className="badge-soft badge-soft-danger">
-                          <i className="bi bi-x-circle-fill"></i>Non justifiée
-                        </span>
-                      )}
+                      {(() => {
+                        const statusConfig = getStatusColor(absence.status || "non_justifie");
+                        return (
+                          <button
+                            className={`badge ${statusConfig.badge} py-2 px-3 border-0`}
+                            style={{ cursor: "pointer", fontSize: "0.85rem" }}
+                            onClick={() => setDetailAbsence(absence)}
+                            title="Voir les détails"
+                          >
+                            <i className={`bi ${statusConfig.icon} me-1`}></i>
+                            {statusConfig.label}
+                          </button>
+                        );
+                      })()}
                     </td>
                     <td className="text-end pe-4">
                       <div className="d-flex justify-content-end gap-2">
@@ -317,6 +334,13 @@ function AbsenceList({
       onConfirm={handleDelete}
       onCancel={() => setConfirm({ open: false, id: null })}
     />
+
+    {detailAbsence && (
+      <AbsenceDetailModal
+        absence={detailAbsence}
+        onClose={() => setDetailAbsence(null)}
+      />
+    )}
     </>
   );
 }

@@ -34,6 +34,19 @@ export const bulkSubmitAttendances = createAsyncThunk(
   }
 );
 
+/** POST /api/attendances — create new attendance */
+export const createAttendance = createAsyncThunk(
+  "absences/create",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/attendances", payload);
+      return response.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Erreur de création");
+    }
+  }
+);
+
 /** PUT /api/attendances/:id — update justification */
 export const updateAttendance = createAsyncThunk(
   "absences/update",
@@ -60,12 +73,30 @@ export const deleteAttendance = createAsyncThunk(
   }
 );
 
+/** PATCH /api/attendances/:id/status — update absence status */
+export const updateAttendanceStatus = createAsyncThunk(
+  "absences/updateStatus",
+  async ({ id, status }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/attendances/${id}/status`, { status });
+      return response.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Erreur de mise à jour du statut");
+    }
+  }
+);
+
 // ─── Helper: normalize backend attendance to frontend shape ───────────────────
-// Backend Attendance: { id, session_id, stagiaire_id, type_absence_id, justification,
+// Backend Attendance: { id, session_id, stagiaire_id, type_absence_id, status,
+//                       created_by_user_id, updated_by_user_id, created_at, updated_at,
+//                       justification, justified_at, recorded_by, recorded_at,
 //                       session: { date_session, programme_id, time_block_id },
 //                       stagiaire: { id, nom, prenom },
-//                       typeAbsence: { code, libelle } }
-// Frontend absence: { id, idstag, date, justifie, heures, slots, typeCode }
+//                       typeAbsence: { code, libelle },
+//                       createdByUser: { id, name, email },
+//                       updatedByUser: { id, name, email } }
+// Frontend absence: { id, idstag, date, status, createdByUser, updatedByUser,
+//                     created_at, updated_at, justifie, justification, heures, typeCode }
 export const normalizeAttendance = (a) => ({
   id: a.id,
   idstag: a.stagiaire_id,
@@ -73,12 +104,21 @@ export const normalizeAttendance = (a) => ({
   date: a.session?.date_session || "",
   session_id: a.session_id,
   time_block_id: a.session?.time_block_id || null,
-  justifie: !!a.justification,
+  status: a.status || "non_justifie",
+  justifie: a.status === "justifie" || !!a.justification,
   justification: a.justification || "",
+  justified_at: a.justified_at,
   heures: 2.5, // each attendance = 1 time block = 2.5h
   typeCode: a.typeAbsence?.code || "ABSENT",
   type_absence_id: a.type_absence_id,
   recorded_by: a.recorded_by,
+  recorded_at: a.recorded_at,
+  created_at: a.created_at,
+  updated_at: a.updated_at,
+  created_by_user_id: a.created_by_user_id,
+  updated_by_user_id: a.updated_by_user_id,
+  createdByUser: a.createdByUser ?? a.created_by_user,
+  updatedByUser: a.updatedByUser ?? a.updated_by_user,
 });
 
 // ─── Slice ─────────────────────────────────────────────────────────────────────
@@ -139,12 +179,22 @@ const absenceSlice = createSlice({
         state.error = action.payload;
       });
 
+    // createAttendance
+    builder
+      .addCase(createAttendance.pending, (state) => { state.error = null; })
+      .addCase(createAttendance.fulfilled, (state, action) => {
+        state.items.push(normalizeAttendance(action.payload));
+      })
+      .addCase(createAttendance.rejected, (state, action) => {
+        state.error = action.payload;
+      });
+
     // updateAttendance
     builder
       .addCase(updateAttendance.pending, (state) => { state.error = null; })
       .addCase(updateAttendance.fulfilled, (state, action) => {
         const idx = state.items.findIndex((a) => a.id === action.payload.id);
-        if (idx !== -1) state.items[idx] = action.payload;
+        if (idx !== -1) state.items[idx] = normalizeAttendance(action.payload);
       })
       .addCase(updateAttendance.rejected, (state, action) => {
         state.error = action.payload;
@@ -157,6 +207,19 @@ const absenceSlice = createSlice({
         state.items = state.items.filter((a) => a.id !== action.payload);
       })
       .addCase(deleteAttendance.rejected, (state, action) => {
+        state.error = action.payload;
+      });
+
+    // updateAttendanceStatus
+    builder
+      .addCase(updateAttendanceStatus.pending, (state) => { state.error = null; })
+      .addCase(updateAttendanceStatus.fulfilled, (state, action) => {
+        const idx = state.items.findIndex((a) => a.id === action.payload.id);
+        if (idx !== -1) {
+          state.items[idx] = normalizeAttendance(action.payload);
+        }
+      })
+      .addCase(updateAttendanceStatus.rejected, (state, action) => {
         state.error = action.payload;
       });
   },

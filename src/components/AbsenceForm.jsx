@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { updateAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
+import { createAttendance, updateAttendance, fetchAttendances } from "../store/absenceSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 
 function AbsenceForm({ absence, onCancel, onSave }) {
   const dispatch = useDispatch();
   const showToast = useToast();
   const stagiaires = useSelector((state) => state.stagiaires.items);
+  const user = useSelector((state) => state.auth.user);
 
   const [formData, setFormData] = useState({
     idstag: "",
     date: "",
+    status: "non_justifie",
     justifie: false,
     justification: "",
     heures: 2.5,
@@ -23,7 +25,8 @@ function AbsenceForm({ absence, onCancel, onSave }) {
       setFormData({
         idstag: (absence.stagiaire_id ?? absence.idstag ?? "").toString(),
         date: absence.date ?? "",
-        justifie: absence.justifie ?? !!absence.justification,
+        status: absence.status || "non_justifie",
+        justifie: absence.status === "justifie" || !!absence.justification,
         justification: absence.justification || "",
         heures: absence.heures || 2.5,
       });
@@ -46,6 +49,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
     setSaving(true);
     try {
       if (absence) {
+        // Update existing absence
         await dispatch(
           updateAttendance({
             id: absence.id,
@@ -55,12 +59,24 @@ function AbsenceForm({ absence, onCancel, onSave }) {
             type_absence_id: absence.type_absence_id,
           })
         ).unwrap();
-        await dispatch(fetchAttendances());
         showToast("Absence mise à jour avec succès.", "success");
+      } else {
+        // Create new absence
+        await dispatch(
+          createAttendance({
+            session_id: 1, // Placeholder - should come from context or props
+            stagiaire_id: parseInt(formData.idstag),
+            type_absence_id: 2, // ABSENT type
+            status: "non_justifie",
+            justification: null,
+          })
+        ).unwrap();
+        showToast("Absence créée avec succès.", "success");
       }
+      await dispatch(fetchAttendances());
       onSave();
     } catch (err) {
-      showToast(String(err) || "Erreur lors de la mise à jour.", "error");
+      showToast(String(err) || "Erreur lors de l'enregistrement.", "error");
       setErrors({ submit: String(err) });
     } finally {
       setSaving(false);
@@ -106,7 +122,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
         <p className="body-sm mt-2 mb-0 ms-5 ps-1">
           {absence
             ? "Modifiez le statut de justification de cette absence."
-            : "Remplissez les informations ci-dessous."}
+            : "Remplissez les informations ci-dessous. Utilisez le Registre de Présence pour enregistrer plusieurs absences à la fois."}
         </p>
       </div>
 
@@ -114,6 +130,15 @@ function AbsenceForm({ absence, onCancel, onSave }) {
         {errors.submit && (
           <div className="alert alert-danger py-2 small mb-3">{errors.submit}</div>
         )}
+
+        {!absence && (
+          <div className="alert alert-info alert-dismissible fade show mb-3 py-2 small" role="alert">
+            <i className="bi bi-info-circle me-2"></i>
+            <strong>💡 Conseil :</strong> Pour enregistrer plusieurs absences à la fois, utilisez le <strong>Registre de Présence</strong> depuis la page d'accueil.
+            <button type="button" className="btn-close btn-sm" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           {/* Stagiaire selector (read-only when editing) */}
           <div className="mb-4">
@@ -193,57 +218,109 @@ function AbsenceForm({ absence, onCancel, onSave }) {
             </div>
           </div>
 
-          {/* Justification toggle */}
-          <div className="mb-4 p-3 rounded-3 border d-inline-block w-100" style={{ background: "var(--color-surface)" }}>
-            <div className="form-check form-switch custom-switch d-flex align-items-center mb-0">
-              <input
-                className="form-check-input ms-0 me-3 mt-0"
-                type="checkbox"
-                name="justifie"
-                id="justifie"
-                style={{ width: "3rem", height: "1.5rem", cursor: "pointer" }}
-                checked={formData.justifie}
-                onChange={handleChange}
-              />
-              <label
-                className="form-check-label fw-bold text-dark d-flex flex-column justify-content-center"
-                htmlFor="justifie"
-                style={{ cursor: "pointer" }}
-              >
-                {formData.justifie ? (
-                  <>
-                    <span className="text-success fs-6">
-                      <i className="bi bi-shield-check me-1"></i>Absence Justifiée
-                    </span>
-                    <span className="small text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
-                      Motif valable fourni
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-danger fs-6">
-                      <i className="bi bi-shield-x me-1"></i>Non Justifiée
-                    </span>
-                    <span className="small text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
-                      En attente de justificatif
-                    </span>
-                  </>
-                )}
+          {/* Status display (read-only for teachers) */}
+          {absence && (
+            <div className="mb-4 p-3 rounded-3 border" style={{ background: "var(--color-surface)" }}>
+              <label className="form-label label-caps fw-bold mb-2">
+                Statut de l'Absence
               </label>
-            </div>
-            {formData.justifie && (
-              <div className="mt-3">
-                <input
-                  type="text"
-                  className="form-control"
-                  name="justification"
-                  value={formData.justification}
-                  onChange={handleChange}
-                  placeholder="Motif de justification (optionnel)"
-                />
+              <div className="d-flex align-items-center gap-2 flex-wrap">
+                <span className={`badge py-2 px-3 ${
+                  formData.status === "non_justifie" ? "bg-danger" :
+                  formData.status === "justifie" ? "bg-success" :
+                  formData.status === "retard" ? "bg-warning" :
+                  "bg-info"
+                }`}>
+                  <i className="bi bi-circle-fill me-2" style={{ fontSize: "0.5rem" }}></i>
+                  {formData.status === "non_justifie" ? "Non justifiée" :
+                   formData.status === "justifie" ? "Justifiée" :
+                   formData.status === "retard" ? "Retard" :
+                   "Absence excusée"}
+                </span>
+                {user?.role === "admin" && (
+                  <small className="text-muted fw-normal">
+                    <i className="bi bi-info-circle me-1"></i>
+                    Pour modifier le statut, utilisez le bouton "Détails" dans la liste
+                  </small>
+                )}
+                {user?.role !== "admin" && (
+                  <small className="text-muted fw-normal">
+                    <i className="bi bi-lock-fill me-1"></i>
+                    Le statut ne peut être modifié que par l'administrateur
+                  </small>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Justification toggle (only for edit mode, when user is admin) */}
+          {absence && user?.role === "admin" && (
+            <div className="mb-4 p-3 rounded-3 border d-inline-block w-100" style={{ background: "var(--color-surface)" }}>
+              <div className="form-check form-switch custom-switch d-flex align-items-center mb-0">
+                <input
+                  className="form-check-input ms-0 me-3 mt-0"
+                  type="checkbox"
+                  name="justifie"
+                  id="justifie"
+                  style={{ width: "3rem", height: "1.5rem", cursor: "pointer" }}
+                  checked={formData.justifie}
+                  onChange={handleChange}
+                />
+                <label
+                  className="form-check-label fw-bold text-dark d-flex flex-column justify-content-center"
+                  htmlFor="justifie"
+                  style={{ cursor: "pointer" }}
+                >
+                  {formData.justifie ? (
+                    <>
+                      <span className="text-success fs-6">
+                        <i className="bi bi-shield-check me-1"></i>Absence Justifiée
+                      </span>
+                      <span className="small text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
+                        Motif valable fourni
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-danger fs-6">
+                        <i className="bi bi-shield-x me-1"></i>Non Justifiée
+                      </span>
+                      <span className="small text-muted fw-normal" style={{ fontSize: "0.75rem" }}>
+                        En attente de justificatif
+                      </span>
+                    </>
+                  )}
+                </label>
+              </div>
+              {formData.justifie && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    className="form-control"
+                    name="justification"
+                    value={formData.justification}
+                    onChange={handleChange}
+                    placeholder="Motif de justification (optionnel)"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Read-only justification display (for teachers viewing their absences) */}
+          {absence && user?.role !== "admin" && (
+            <div className="mb-4 p-3 rounded-3 border" style={{ background: "var(--color-surface)" }}>
+              <label className="form-label fw-semibold mb-2">Justification</label>
+              {formData.justification ? (
+                <p className="mb-0 text-muted">{formData.justification}</p>
+              ) : (
+                <p className="mb-0 text-muted fw-normal">
+                  <i className="bi bi-info-circle me-1"></i>
+                  Aucune justification fournie
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="d-flex gap-3 pt-3 border-top mt-2">
             <button
