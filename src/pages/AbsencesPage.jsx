@@ -7,7 +7,6 @@ import Filters from "../components/Filters.jsx";
 import CalendarHistory from "../components/CalendarHistory.jsx";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
-import { SkeletonTableRows } from "../components/Skeleton.jsx";
 
 function AbsencesPage() {
   const navigate  = useNavigate();
@@ -66,21 +65,6 @@ function AbsencesPage() {
         </div>
       )}
 
-      {loading && (
-        <div
-          className="mb-4"
-          style={{
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-          }}
-        >
-          <table className="table align-middle mb-0">
-            <SkeletonTableRows rows={8} cols={5} />
-          </table>
-        </div>
-      )}
 
       {showForm ? (
         <div className="row justify-content-center">
@@ -104,6 +88,7 @@ function AbsencesPage() {
               dateRange={filters.dateRange}
               stagiaireFilter={filters.stagiaireFilter}
               filiereFilter={filters.filiereFilter}
+              loading={loading}
             />
           </div>
           <CalendarHistory />

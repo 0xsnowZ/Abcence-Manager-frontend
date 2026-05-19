@@ -7,12 +7,26 @@ import AbsenceDetailModal from "./AbsenceDetailModal.jsx";
 import StagiaireDetail from "./StagiaireDetail.jsx";
 import { exportAbsencesToExcel } from "../utils/exportExcel.js";
 
+const SHIMMER_CSS = `
+@keyframes skeleton-shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+.skeleton-box {
+  background: linear-gradient(90deg,#e2e8f0 25%,#f1f5f9 50%,#e2e8f0 75%);
+  background-size: 1200px 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+`;
+
 function AbsenceList({
   onEdit,
   filterType = "all",
   dateRange = null,
   stagiaireFilter = null,
   filiereFilter = null,
+  loading = false,
 }) {
   const dispatch = useDispatch();
   const showToast = useToast();
@@ -197,7 +211,52 @@ function AbsenceList({
                 </tr>
               </thead>
               <tbody>
-                {filteredAbsences.length === 0 ? (
+                {loading && absences.length === 0 ? (
+                  <>
+                    <style>{SHIMMER_CSS}</style>
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <tr key={i}>
+                        {/* ID */}
+                        <td className="ps-4 d-none d-sm-table-cell">
+                          <div className="skeleton-box" style={{ height: 13, width: 28 }} />
+                        </td>
+                        {/* Stagiaire — avatar + name */}
+                        <td>
+                          <div className="d-flex align-items-center">
+                            <div
+                              className="skeleton-box me-3 flex-shrink-0"
+                              style={{ width: 36, height: 36, borderRadius: "50%" }}
+                            />
+                            <div className="skeleton-box" style={{ height: 14, width: `${55 + (i % 3) * 15}%` }} />
+                          </div>
+                        </td>
+                        {/* Classe badge */}
+                        <td className="d-none d-md-table-cell">
+                          <div className="skeleton-box" style={{ height: 22, width: 70, borderRadius: 99 }} />
+                        </td>
+                        {/* Date */}
+                        <td>
+                          <div className="skeleton-box" style={{ height: 13, width: 80 }} />
+                        </td>
+                        {/* Heures */}
+                        <td className="text-center d-none d-md-table-cell">
+                          <div className="skeleton-box mx-auto" style={{ height: 22, width: 48, borderRadius: 99 }} />
+                        </td>
+                        {/* Statut badge */}
+                        <td className="text-center">
+                          <div className="skeleton-box mx-auto" style={{ height: 28, width: 100, borderRadius: 99 }} />
+                        </td>
+                        {/* Actions */}
+                        <td className="text-end pe-4">
+                          <div className="d-flex justify-content-end gap-2">
+                            <div className="skeleton-box" style={{ width: 32, height: 32, borderRadius: "50%" }} />
+                            <div className="skeleton-box" style={{ width: 32, height: 32, borderRadius: "50%" }} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                ) : filteredAbsences.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="text-center text-muted py-5">
                       <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
