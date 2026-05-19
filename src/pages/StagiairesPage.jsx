@@ -98,13 +98,6 @@ function StagiairesPage() {
 
   const isLoading = loadingStagiaires || loadingSecteurs;
 
-  if (isLoading && stagiaires.length === 0 && secteurs.length === 0) {
-    return (
-      <div className="container-xxl px-4 py-5">
-        <SkeletonCardList count={6} />
-      </div>
-    );
-  }
 
   return (
     <div className="container-xxl px-4 py-5">
@@ -238,7 +231,9 @@ function StagiairesPage() {
       ) : (
         /* ── Level 1: secteurs ── */
         <div className="row g-4">
-          {secteurs.length === 0 ? (
+          {isLoading && secteurs.length === 0 ? (
+            <SkeletonCardList count={6} />
+          ) : secteurs.length === 0 ? (
             <div className="col-12 text-center py-5 body-sm">
               <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>
               Aucun secteur enregistré.
