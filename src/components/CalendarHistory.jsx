@@ -269,8 +269,8 @@ function CalendarHistory() {
 
                         if (totalHours > 0) {
                           cellClass = allJustified
-                            ? "is-justified"
-                            : "is-absent";
+                            ? "cal-justified"
+                            : "cal-absent";
                           cellContent = `${totalHours}h`;
                         } else {
                           cellContent = (

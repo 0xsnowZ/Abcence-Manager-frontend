@@ -349,6 +349,24 @@ body {
 .cal-grid .cell-slot { cursor: default; position: relative; vertical-align: middle; text-align: center; height: 44px; }
 .is-justified { background-color: var(--color-success-light) !important; color: var(--color-success); font-weight: 700; font-size: 0.8rem; }
 
+/* Calendar history — per-cell status styles (distinct from SaisiePage toggle cells) */
+.cal-absent {
+  background-color: #fff1f2 !important;
+  border-left: 3px solid #f43f5e !important;
+  color: #e11d48;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.cal-justified {
+  background-color: #f0fdf4 !important;
+  border-left: 3px solid #22c55e !important;
+  color: #16a34a;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.cal-hover-row:hover td.cal-absent   { background-color: #ffe4e6 !important; }
+.cal-hover-row:hover td.cal-justified { background-color: #dcfce7 !important; }
+
 /* ─── SaisiePage attendance grid ────────────────────────────────────────────── */
 .professional-grid { border-collapse: collapse; width: 100%; }
 .professional-grid th, .professional-grid td { border: 1px solid #cbd5e1 !important; }
