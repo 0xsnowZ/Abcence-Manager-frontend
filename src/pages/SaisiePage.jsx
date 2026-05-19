@@ -128,12 +128,17 @@ function SaisiePage() {
     [programmes, selectedProgrammeId],
   );
 
-  // Stagiaires for the selected programme
+  // Stagiaires for the selected programme — sorted alphabetically by nom then prenom
   const filteredStagiaires = useMemo(() => {
     if (!selectedProgramme) return [];
-    return stagiaires.filter((s) =>
-      (s.programmes || []).some((p) => p.id === selectedProgramme.id),
-    );
+    return stagiaires
+      .filter((s) =>
+        (s.programmes || []).some((p) => p.id === selectedProgramme.id),
+      )
+      .sort((a, b) =>
+        (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" }) ||
+        (a.prenom || "").localeCompare(b.prenom || "", "fr", { sensitivity: "base" })
+      );
   }, [stagiaires, selectedProgramme]);
 
   // Build a map of already-submitted absences for the grid
@@ -506,7 +511,7 @@ function SaisiePage() {
                     {filteredStagiaires.map((stagiaire) => {
                       const displayName =
                         stagiaire.nomComplet ||
-                        `${stagiaire.prenom || ""} ${stagiaire.nom || ""}`.trim() ||
+                        `${stagiaire.nom || ""} ${stagiaire.prenom || ""}`.trim() ||
                         stagiaire.nom ||
                         "—";
                       return (

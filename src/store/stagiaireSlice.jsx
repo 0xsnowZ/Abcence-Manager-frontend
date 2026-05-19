@@ -72,13 +72,21 @@ export const normalizeStagiaire = (s) => ({
   matricule: s.matricule,
   nom: s.nom,
   prenom: s.prenom,
-  nomComplet: `${s.prenom} ${s.nom}`,
+  nomComplet: `${s.nom} ${s.prenom}`,
   sexe: s.sexe || "m",
   filiere: s.filiere || s.programme_code || "",
   programmes: s.programmes || [],
   cin: s.cin || "",
   telephone: s.telephone || s.tel || "",
 });
+
+// Sort stagiaires alphabetically: nom (family name) then prenom
+const sortStagiaires = (items) =>
+  [...items].sort((a, b) => {
+    const cmp = (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" });
+    if (cmp !== 0) return cmp;
+    return (a.prenom || "").localeCompare(b.prenom || "", "fr", { sensitivity: "base" });
+  });
 
 // ─── Slice ─────────────────────────────────────────────────────────────────────
 const stagiaireSlice = createSlice({
@@ -102,7 +110,7 @@ const stagiaireSlice = createSlice({
       })
       .addCase(fetchStagiaires.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = sortStagiaires(action.payload);
       })
 
       .addCase(fetchStagiaires.rejected, (state, action) => {
@@ -114,7 +122,7 @@ const stagiaireSlice = createSlice({
     builder
       .addCase(createStagiaire.pending, (state) => { state.error = null; })
       .addCase(createStagiaire.fulfilled, (state, action) => {
-        state.items.push(action.payload);
+        state.items = sortStagiaires([...state.items, action.payload]);
       })
       .addCase(createStagiaire.rejected, (state, action) => {
         state.error = action.payload;
@@ -126,6 +134,7 @@ const stagiaireSlice = createSlice({
       .addCase(updateStagiaire.fulfilled, (state, action) => {
         const idx = state.items.findIndex((s) => s.id === action.payload.id);
         if (idx !== -1) state.items[idx] = action.payload;
+        state.items = sortStagiaires(state.items);
       })
       .addCase(updateStagiaire.rejected, (state, action) => {
         state.error = action.payload;

@@ -93,7 +93,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
   };
 
   const getDisplayName = (s) =>
-    s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
+    s.prenom ? `${s.nom} ${s.prenom}` : s.nomComplet || s.nom;
 
   if (stagiaires.length === 0) {
     return (

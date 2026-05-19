@@ -41,8 +41,13 @@ function Filters({ onFilterChange }) {
 
   // When a Filière is selected, only show its trainees in the Stagiaire dropdown
   const filteredStagiaires = useMemo(() => {
-    if (!filiereFilter) return stagiaires;
-    return stagiaires.filter((s) => getStagiaireClasse(s) === filiereFilter);
+    const list = !filiereFilter
+      ? stagiaires
+      : stagiaires.filter((s) => getStagiaireClasse(s) === filiereFilter);
+    return [...list].sort((a, b) =>
+      (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" }) ||
+      (a.prenom || "").localeCompare(b.prenom || "", "fr", { sensitivity: "base" })
+    );
   }, [stagiaires, filiereFilter]);
 
   const applyFilters = () => {
@@ -127,7 +132,7 @@ function Filters({ onFilterChange }) {
             >
               <option value="">{filiereFilter ? `Tous (${filteredStagiaires.length})` : "Tous les stagiaires"}</option>
               {filteredStagiaires.map((s) => {
-                const name = s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
+                const name = s.prenom ? `${s.nom} ${s.prenom}` : s.nomComplet || s.nom;
                 const filiere = getStagiaireClasse(s);
                 return (
                   <option key={s.id} value={s.id}>

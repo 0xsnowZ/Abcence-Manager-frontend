@@ -18,7 +18,7 @@ function StagiaireList({ onEdit, onView, filiere, onBack }) {
     absences.filter((a) => (a.stagiaire_id || a.idstag) === stagiaireId).length;
 
   const getDisplayName = (s) => {
-    if (s.prenom && s.nom) return `${s.prenom} ${s.nom}`;
+    if (s.prenom && s.nom) return `${s.nom} ${s.prenom}`;
     return s.nomComplet || s.nom || "—";
   };
 
@@ -29,6 +29,10 @@ function StagiaireList({ onEdit, onView, filiere, onBack }) {
       )
       .filter((s) =>
         getDisplayName(s).toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) =>
+        (a.nom || "").localeCompare(b.nom || "", "fr", { sensitivity: "base" }) ||
+        (a.prenom || "").localeCompare(b.prenom || "", "fr", { sensitivity: "base" })
       );
   }, [stagiaires, filiere, searchTerm]);
 

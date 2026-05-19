@@ -37,7 +37,7 @@ function AbsenceList({
     if (absence.stagiaireNom) return absence.stagiaireNom;
     const s = stagiaires.find((st) => st.id === absence.idstag);
     if (!s) return "Inconnu";
-    return s.prenom ? `${s.prenom} ${s.nom}` : s.nomComplet || s.nom;
+    return s.prenom ? `${s.nom} ${s.prenom}` : s.nomComplet || s.nom;
   };
 
   const getStagiaireFiliere = (id) => {
