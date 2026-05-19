@@ -7,7 +7,10 @@ const api = axios.create({
     "Content-Type": "application/json",
     Accept: "application/json",
   },
-  withCredentials: true,
+  // withCredentials is NOT needed for Bearer token auth (Sanctum token in localStorage).
+  // Enabling it forces the browser to send an OPTIONS preflight that requires
+  // Access-Control-Allow-Credentials: true, which breaks with wildcard origins.
+  withCredentials: false,
 });
 
 // ─── Request interceptor — attach Bearer token ─────────────────────────────────
