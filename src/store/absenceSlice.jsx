@@ -100,7 +100,7 @@ export const updateAttendanceStatus = createAsyncThunk(
 export const normalizeAttendance = (a) => ({
   id: a.id,
   idstag: a.stagiaire_id,
-  stagiaireNom: a.stagiaire ? `${a.stagiaire.prenom} ${a.stagiaire.nom}` : "",
+  stagiaireNom: a.stagiaire ? `${a.stagiaire.nom} ${a.stagiaire.prenom}` : "",
   date: a.session?.date_session || "",
   session_id: a.session_id,
   time_block_id: a.session?.time_block_id || null,

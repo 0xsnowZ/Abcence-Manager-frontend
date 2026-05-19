@@ -9,6 +9,7 @@ import {
 import { fetchSecteurs, fetchProgrammesBySecteur } from "../store/secteurSlice.jsx";
 import { useToast } from "../components/ToastProvider.jsx";
 import ConfirmModal from "../components/ConfirmModal.jsx";
+import { SkeletonTableRows } from "../components/Skeleton.jsx";
 
 const createAssignmentBlock = (secteurId = "", filiereIds = []) => ({
   id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -559,12 +560,16 @@ function ProfsPage() {
 
             <div className="card-body p-0">
               {loading ? (
-                <div className="text-center py-5 text-muted">
-                  <div
-                    className="spinner-border text-dark-navy mb-3"
-                    role="status"
-                  ></div>
-                  <p className="fw-medium">Chargement des professeurs…</p>
+                <div
+                  style={{
+                    background: "var(--color-surface)",
+                    borderRadius: "var(--radius-lg)",
+                    overflow: "hidden",
+                  }}
+                >
+                  <table className="table align-middle mb-0">
+                    <SkeletonTableRows rows={5} cols={3} />
+                  </table>
                 </div>
               ) : filteredProfs.length === 0 ? (
                 <div className="text-center py-5 text-muted">

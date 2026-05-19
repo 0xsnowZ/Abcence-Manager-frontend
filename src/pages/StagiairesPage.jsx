@@ -8,6 +8,7 @@ import {
   fetchSecteurs,
   fetchProgrammesBySecteur,
 } from "../store/secteurSlice.jsx";
+import { SkeletonCardList, SkeletonProgrammeCards } from "../components/Skeleton.jsx";
 
 const SECTEUR_ICONS = {
   DIA: "bi-cpu-fill",
@@ -99,13 +100,8 @@ function StagiairesPage() {
 
   if (isLoading && stagiaires.length === 0 && secteurs.length === 0) {
     return (
-      <div className="container-xxl px-4 py-5 text-center">
-        <div
-          className="spinner-border"
-          style={{ color: "var(--color-primary)" }}
-          role="status"
-        />
-        <p className="mt-3 body-sm">Chargement…</p>
+      <div className="container-xxl px-4 py-5">
+        <SkeletonCardList count={6} />
       </div>
     );
   }
@@ -212,13 +208,7 @@ function StagiairesPage() {
           </button>
 
           {loadingProgrammes ? (
-            <div className="text-center py-5">
-              <div
-                className="spinner-border"
-                style={{ color: "var(--color-primary)" }}
-                role="status"
-              />
-            </div>
+            <SkeletonProgrammeCards count={4} />
           ) : currentProgrammes.length === 0 ? (
             <div className="text-center py-5 body-sm">
               <i className="bi bi-inbox fs-1 d-block mb-3 opacity-25"></i>

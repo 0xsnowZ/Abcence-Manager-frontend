@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { Users, AlertTriangle, Clock, BarChart3 } from "lucide-react";
+import { SkeletonStatCards, SkeletonTableRows } from "../components/Skeleton.jsx";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   RadialBarChart, RadialBar,
@@ -193,9 +194,21 @@ function Statistics({ selectedMonth }) {
   // ── loading / error states ────────────────────────────────────────────────
   if (loading && absences.length === 0) {
     return (
-      <div className="text-center py-5 text-muted">
-        <div className="spinner-border mb-3" style={{ color: "var(--color-primary)" }} role="status" />
-        <p className="fw-medium">Chargement des statistiques…</p>
+      <div>
+        <SkeletonStatCards count={3} />
+        <div
+          className="p-0 mt-2"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
+          }}
+        >
+          <table className="table align-middle mb-0">
+            <SkeletonTableRows rows={6} cols={5} />
+          </table>
+        </div>
       </div>
     );
   }

@@ -7,6 +7,7 @@ import Filters from "../components/Filters.jsx";
 import CalendarHistory from "../components/CalendarHistory.jsx";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
+import { SkeletonTableRows } from "../components/Skeleton.jsx";
 
 function AbsencesPage() {
   const navigate  = useNavigate();
@@ -66,9 +67,18 @@ function AbsencesPage() {
       )}
 
       {loading && (
-        <div className="text-center py-3 mb-4">
-          <div className="spinner-border spinner-border-sm me-2" style={{ color: "var(--color-primary)" }} role="status" />
-          <span className="body-sm">Chargement des absences…</span>
+        <div
+          className="mb-4"
+          style={{
+            background: "var(--color-surface)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "var(--radius-lg)",
+            overflow: "hidden",
+          }}
+        >
+          <table className="table align-middle mb-0">
+            <SkeletonTableRows rows={8} cols={5} />
+          </table>
         </div>
       )}
 

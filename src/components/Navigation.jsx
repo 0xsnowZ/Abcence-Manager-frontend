@@ -140,10 +140,6 @@ function Navigation({ onCollapse }) {
           <i className={`bi bi-${mobileOpen ? "x-lg" : "list"}`}></i>
         </button>
 
-        <button className="topbar-back-btn" onClick={handleBack} title="Retour" aria-label="Retour">
-          <i className="bi bi-arrow-left"></i>
-          <span>Retour</span>
-        </button>
 
         {/* Logout */}
         <div className="topbar-actions">
@@ -409,27 +405,6 @@ function Navigation({ onCollapse }) {
           align-items: center;
           gap: 12px;
           margin-left: auto;
-        }
-        .topbar-back-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 0.45rem;
-          background: #fff;
-          border: 1px solid var(--color-border);
-          color: var(--color-text);
-          border-radius: 10px;
-          padding: 0.45rem 0.85rem;
-          font-size: 0.86rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background 0.15s, border-color 0.15s, transform 0.15s, color 0.15s;
-          white-space: nowrap;
-        }
-        .topbar-back-btn:hover {
-          background: #f8fafc;
-          border-color: var(--color-border-strong);
-          color: var(--color-primary);
-          transform: translateY(-1px);
         }
         .topbar-avatar {
           width: 32px; height: 32px;
