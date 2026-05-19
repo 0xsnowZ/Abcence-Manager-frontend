@@ -5,6 +5,7 @@ import { useToast } from "./ToastProvider.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
 import AbsenceDetailModal from "./AbsenceDetailModal.jsx";
 import StagiaireDetail from "./StagiaireDetail.jsx";
+import { exportAbsencesToExcel } from "../utils/exportExcel.js";
 
 function AbsenceList({
   onEdit,
@@ -140,9 +141,21 @@ function AbsenceList({
             </span>
             Historique des Absences
           </h5>
-          <span className="badge-soft badge-soft-primary">
-            {filteredAbsences.length} Enregistrements
-          </span>
+          <div className="d-flex align-items-center gap-2">
+            <span className="badge-soft badge-soft-primary">
+              {filteredAbsences.length} Enregistrements
+            </span>
+            <button
+              className="btn btn-success btn-sm fw-bold d-flex align-items-center gap-1 px-3"
+              onClick={() => exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilter || "")}
+              disabled={filteredAbsences.length === 0}
+              title={filteredAbsences.length === 0 ? "Aucune donnée à exporter" : "Exporter en Excel"}
+              style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
+            >
+              <i className="bi bi-file-earmark-excel-fill"></i>
+              Exporter Excel
+            </button>
+          </div>
         </div>
         <div className="card-body pt-0">
           <div className="mb-3 pt-3 px-1">
