@@ -13,23 +13,42 @@ import {
   bulkSubmitAttendances,
   fetchAttendances,
 } from "../store/absenceSlice.jsx";
+import api from "../services/api.js";
 
 // Saisie Page
 function SaisiePage() {
   const showToast = useToast();
   const dispatch = useDispatch();
   const stagiaires = useSelector((state) => state.stagiaires.items);
+  const lastFetched = useSelector((state) => state.stagiaires.lastFetched);
   const allAbsences = useSelector((state) => state.absences.items);
   const { user } = useSelector((state) => state.auth);
   const { items: programmes } = useSelector((state) => state.programmes);
   const { timeBlocks } = useSelector((state) => state.sessions);
 
+  // BUG-04: Store ABSENT type_absence id resolved from backend
+  const [absentTypeId, setAbsentTypeId] = useState(null);
+
   // Load time blocks, programmes, stagiaires and existing attendances on mount
   useEffect(() => {
     dispatch(fetchTimeBlocks());
     dispatch(fetchProgrammes());
+    // BUG-03: Only load absences for the current view — initial load without filter is fine,
+    //         but we skip the redundant re-fetch after submit (handled by Redux merge).
     dispatch(fetchAttendances());
-    if (stagiaires.length === 0) dispatch(fetchStagiaires());
+    // PERF-01: Skip re-fetch if data was loaded within the last 5 minutes
+    const fiveMinutes = 5 * 60 * 1000;
+    if (!lastFetched || Date.now() - lastFetched > fiveMinutes) {
+      dispatch(fetchStagiaires());
+    }
+    // BUG-04: Resolve the 'ABSENT' type_absence id dynamically
+    api.get("/type-absences").then((res) => {
+      const types = res.data?.data || [];
+      const absentType = types.find((t) => t.code === "ABSENT");
+      if (absentType) setAbsentTypeId(absentType.id);
+    }).catch(() => {
+      // Silently fall back — will show error on submit if still null
+    });
   }, [dispatch]);
 
   // Build slots from timeBlocks (TB1→S1, TB2→S2, …) or fall back to static
@@ -137,20 +156,25 @@ function SaisiePage() {
   }, [stagiaires, selectedProgramme]);
 
   // Build a map of already-submitted absences for the grid
+  // BUG-07: Scope to the current programme's stagiaires to prevent cross-programme false positives
   const reduxAbsencesMap = useMemo(() => {
     const map = {};
+    if (!selectedProgramme || filteredStagiaires.length === 0) return map;
+
+    const stagiaireIds = new Set(filteredStagiaires.map((s) => s.id));
+
     allAbsences.forEach((a) => {
-      const dateStr = (a.date || "").slice(0, 10);
       const stagId = a.idstag || a.stagiaire_id;
+      if (!stagiaireIds.has(stagId)) return; // ignore other programmes
+      const dateStr = (a.date || "").slice(0, 10);
       const tbId = a.time_block_id;
-      // Map time_block_id → slot index
       const slotIdx = slots.findIndex((s) => s.timeBlockId === tbId);
       if (slotIdx !== -1) {
-        map[`${stagId}|${dateStr}|${slotIdx + 1}`] = true;
+        map[`${stagId}|${dateStr}|${slotIdx + 1}`] = a;
       }
     });
     return map;
-  }, [allAbsences, slots]);
+  }, [allAbsences, slots, filteredStagiaires, selectedProgramme]);
 
   // Calculate dates between start and end
   const getDatesInRange = (startDate, endDate) => {
@@ -209,6 +233,12 @@ function SaisiePage() {
       e.preventDefault();
       if (!dateColumns.length || !selectedProgramme) return;
 
+      // BUG-04: Ensure ABSENT type id is resolved before submitting
+      if (!absentTypeId) {
+        showToast("Impossible de résoudre le type d'absence. Veuillez recharger la page.", "error");
+        return;
+      }
+
       // Collect checked cells: { `stagId|dateStr|slotIdx` }
       const checkedEntries = Object.entries(saisieData).filter(([, v]) => v);
       if (checkedEntries.length === 0) {
@@ -239,7 +269,7 @@ function SaisiePage() {
             continue;
           }
 
-          // Find or create session
+          // BUG-01: Single atomic call instead of GET-then-POST
           const session = await dispatch(
             findOrCreateSession({
               programme_id: selectedProgramme.id,
@@ -249,10 +279,10 @@ function SaisiePage() {
             }),
           ).unwrap();
 
-          // Build bulk attendances payload
+          // BUG-04: Use dynamically resolved ABSENT type id
           const attendances = stagIds.map((stagId) => ({
             stagiaire_id: stagId,
-            type_absence_id: 2, // 2 = ABSENT
+            type_absence_id: absentTypeId,
             justification: null,
           }));
 
@@ -263,8 +293,8 @@ function SaisiePage() {
           totalAdded += stagIds.length;
         }
 
-        // Refresh absences list
-        dispatch(fetchAttendances());
+        // BUG-03: Do NOT re-fetch all 500 absences — the Redux store is already
+        // updated by bulkSubmitAttendances.fulfilled via the normalizeAttendance merge.
 
         showToast(`${totalAdded} absence(s) enregistrée(s) avec succès.`, "success");
         setSaisieData({});
@@ -277,7 +307,7 @@ function SaisiePage() {
         setIsSubmitting(false);
       }
     },
-    [saisieData, dateColumns, selectedProgramme, slots, dispatch, user],
+    [saisieData, dateColumns, selectedProgramme, slots, dispatch, user, absentTypeId],
   );
 
   const lockedProgramme =

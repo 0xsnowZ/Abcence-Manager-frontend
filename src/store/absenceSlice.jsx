@@ -162,14 +162,15 @@ const absenceSlice = createSlice({
       })
       .addCase(bulkSubmitAttendances.fulfilled, (state, action) => {
         state.loading = false;
-        // Merge new attendances into items (upsert by id)
+        // QA-01: Normalize before merging so items have consistent frontend shape
         if (action.payload) {
           action.payload.forEach((newItem) => {
-            const idx = state.items.findIndex((a) => a.id === newItem.id);
+            const normalized = normalizeAttendance(newItem);
+            const idx = state.items.findIndex((a) => a.id === normalized.id);
             if (idx !== -1) {
-              state.items[idx] = newItem;
+              state.items[idx] = normalized;
             } else {
-              state.items.push(newItem);
+              state.items.push(normalized);
             }
           });
         }
