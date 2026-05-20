@@ -380,7 +380,7 @@ body {
 .sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
 .professional-grid .cell-slot { cursor: pointer; transition: background 0.15s; position: relative; }
 .professional-grid .cell-slot:hover { background: #f1f5ff; }
-.abs-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; line-height: 1; transition: transform 0.15s, box-shadow 0.15s; }
+.abs-badge { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; line-height: 1; transition: transform 0.15s, box-shadow 0.15s; }
 .abs-badge--new { background: #dc3545; color: #fff; box-shadow: 0 1px 4px rgba(220,53,69,0.35); }
 .abs-badge--unjustified { background: #dc3545; color: #fff; box-shadow: 0 1px 4px rgba(220,53,69,0.35); }
 .abs-badge--justified { background: #28a745; color: #fff; box-shadow: 0 1px 4px rgba(40,167,69,0.35); }
