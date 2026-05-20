@@ -34,8 +34,7 @@ function StagiaireForm({
     nom: stagiaire?.nom || "",
     prenom: stagiaire?.prenom || "",
     filiere:
-      stagiaire?.filiere ||
-      stagiaire?.programme_code ||
+      stagiaire?.programmes?.[0]?.code_diplome ||
       (profFilieres.length === 1 ? profFilieres[0] : ""),
     sexe: stagiaire?.sexe || "m",
     matricule: stagiaire?.matricule || "",
