@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
+import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import { Users, AlertTriangle, Clock, BarChart3 } from "lucide-react";
 import { SkeletonStatCards, SkeletonTableRows } from "../components/Skeleton.jsx";
 import {
@@ -50,7 +51,8 @@ function Statistics({ selectedMonth }) {
 
   useEffect(() => {
     if (absences.length === 0 && !loading) dispatch(fetchAttendances());
-  }, [dispatch, absences.length, loading]);
+    if (stagiaires.length === 0) dispatch(fetchStagiaires());
+  }, [dispatch, absences.length, loading, stagiaires.length]);
 
   const normalizedAbsences = useMemo(() =>
     absences.map((a) => ({
