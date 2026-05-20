@@ -79,10 +79,11 @@ function SaisiePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const availableProgrammes = useMemo(() => {
+    let list = programmes;
     if (profProgrammeIds.length > 0) {
-      return programmes.filter((p) => profProgrammeIds.includes(p.id));
+      list = programmes.filter((p) => profProgrammeIds.includes(p.id));
     }
-    return programmes;
+    return [...list].sort((a, b) => (a.code_diplome || "").localeCompare(b.code_diplome || "fr"));
   }, [programmes, profProgrammeIds]);
 
   useEffect(() => {
