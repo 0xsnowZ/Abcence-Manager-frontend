@@ -297,7 +297,7 @@ body {
 .premium-table thead th { padding: 0.65rem 1rem; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--color-text-muted); white-space: nowrap; border: none; }
 .premium-table tbody tr { border-bottom: 1px solid var(--color-border); transition: background 0.12s; }
 .premium-table tbody tr:last-child { border-bottom: none; }
-.premium-table tbody tr:hover { background: var(--color-info-light); }
+.premium-table tbody tr:hover td { background: #e2e8f0 !important; }
 .premium-table tbody td { padding: 0.75rem 1rem; vertical-align: middle; border: none; }
 
 /* Round action buttons used in list tables */
@@ -341,9 +341,9 @@ body {
 .cal-grid th, .cal-grid td { border: 1px solid #cbd5e1 !important; }
 .cal-grid thead th { background: var(--color-bg) !important; border-bottom: 2px solid #94a3b8 !important; padding: 0.5rem 0.25rem; color: var(--color-text-muted); font-weight: 600; }
 .cal-sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
-.cal-name-col { border-right: 3px solid #ef4444 !important; font-size: 0.77rem; color: var(--color-text); font-weight: 700 !important; }
-.cal-hover-row:hover .cal-sticky-col { background: var(--color-info-light) !important; }
-.cal-hover-row:hover td:not(.cal-absent):not(.cal-justified) { background: var(--color-info-light) !important; }
+.cal-name-col { border-right: 3px solid #ef4444 !important; font-size: 0.72rem !important; color: var(--color-text); font-weight: 700 !important; }
+.cal-hover-row:hover .cal-sticky-col { background: #e2e8f0 !important; }
+.cal-hover-row:hover td:not(.cal-absent):not(.cal-justified) { background: #e2e8f0 !important; }
 .fw-600 { font-weight: 600; }
 .cal-grid .cell-slot { cursor: default; position: relative; vertical-align: middle; text-align: center; height: 44px; }
 .is-justified { background-color: var(--color-success-light) !important; color: var(--color-success); font-weight: 700; font-size: 0.8rem; }
