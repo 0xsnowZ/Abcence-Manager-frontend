@@ -1,135 +1,221 @@
-# Absence Manager — Pro Edition
+<div align="center">
 
-A modern React application for managing student absences in vocational training centers. Features bulk attendance entry, role-based access control, calendar history, and a premium SaaS-style UI.
+# 🎓 Absence Manager — Frontend
 
-## Features
+**Modern attendance management UI for ISTA Inezgane · OFPPT**
 
-- **Bulk Attendance Grid (Registre de Présence)** — spreadsheet-style grid with S1–S4 time slots; submit an entire class's absences in one action
-- **Calendar History** — date-range calendar view showing each student's absence days at a glance (red = unjustified, green = justified)
-- **Absence Management** — list view with search, filters (date range, class, status), edit justifications, and delete
-- **Student Management** — browse by sector → programme → class; add, edit, and remove students
-- **Statistics Dashboard** — KPI cards (total, justified, unjustified hours) with justification rate progress bars
-- **Prof Management** — admin can create, edit, and delete professor accounts
-- **Role-based access (RBAC)**
-  - `admin` — full access (statistics, delete, prof management)
-  - `prof` — scoped to their assigned programmes; can record and view absences
-- **Toast notifications** — success / warning / error feedback with animated progress bar
-- **Error Boundary** — app-level catch for unexpected render errors
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev)
+[![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=for-the-badge&logo=redux&logoColor=white)](https://redux-toolkit.js.org)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
 
-## Tech Stack
+[**Live App**](https://absence-app-one.vercel.app) · [**Backend Repo**](https://github.com/0xsnowZ/Absence-Manager-backend) · [**Report Bug**](https://github.com/0xsnowZ/Absence-Manager-frontend/issues)
 
-| Layer | Library |
+</div>
+
+---
+
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Tech Stack](#-tech-stack)
+- [Screenshots](#-screenshots)
+- [Getting Started](#-getting-started)
+- [Project Structure](#-project-structure)
+- [State Management](#-state-management)
+- [Deployment](#-deployment)
+- [Roadmap](#-roadmap)
+
+---
+
+## 🌟 Overview
+
+A **professional, dark-mode SaaS dashboard** built for **ISTA Inezgane** to digitize and streamline the attendance tracking process for stagiaires. Replaces paper-based call registers with a real-time, multi-role web application.
+
+| Role | Capabilities |
 |---|---|
-| UI Framework | React 18 |
-| State | Redux Toolkit 1.9 |
-| Routing | React Router DOM 6 |
-| HTTP | Axios 1.x |
-| Styles | Bootstrap 5.3 + Bootstrap Icons 1.11 |
-| Calendar | react-calendar 6 |
-| Build | Vite 5 |
-| Font | Inter (Google Fonts) |
+| **Admin** | Full access — manage stagiaires, profs, programmes, view all stats |
+| **Prof** | Record attendance for assigned sessions, view own calendar |
 
-## Getting Started
+---
+
+## ✨ Features
+
+### Core
+- 🔐 **Secure login** — Bearer token auth via Laravel Sanctum
+- 👥 **Stagiaire management** — Full CRUD with Excel bulk import
+- 📅 **Digital attendance register** — Per-session, per-time-block recording
+- ✅ **Justification workflow** — Mark absences as justified / unjustified
+- 📊 **Statistics dashboard** — KPI cards, charts, absence rates per programme
+
+### UX
+- 🌙 **Dark mode** — Premium glassmorphism design system
+- 💀 **Skeleton loading** — Context-aware shimmer loaders (no layout shift)
+- 🗓 **Calendar history** — Color-coded monthly absence grid per stagiaire
+- 📤 **Excel export** — Download attendance data as `.xlsx`
+- 📱 **Responsive** — Works on desktop, tablet, and mobile
+
+---
+
+## 🛠 Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 18 + Vite 5 |
+| State | Redux Toolkit + React-Redux |
+| Routing | React Router v6 |
+| HTTP | Axios (with request/response interceptors) |
+| Charts | Recharts |
+| Icons | Bootstrap Icons |
+| Excel | SheetJS (xlsx) |
+| Styles | Vanilla CSS + CSS custom properties |
+| Deploy | Vercel (static) |
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
-
 - Node.js 18+
-- A running instance of the [Absence Manager API](https://github.com/0xsnowZ/absence-manager--redux) (Laravel backend)
+- npm 9+
 
-### Install
+### Installation
 
 ```bash
-git clone https://github.com/0xsnowZ/absence-manager--redux.git
-cd absence-manager--redux
+# 1. Clone the repository
+git clone https://github.com/0xsnowZ/Absence-Manager-frontend.git
+cd Absence-Manager-frontend
+
+# 2. Install dependencies
 npm install
-```
 
-### Configure
-
-Copy the example env file and set your backend URL:
-
-```bash
+# 3. Configure environment
 cp .env.example .env
-```
+# Set VITE_API_URL=http://localhost:8000/api  (or your Railway URL)
 
-```env
-# .env
-VITE_API_URL=http://localhost:8000
-```
-
-### Run
-
-```bash
+# 4. Start development server
 npm run dev
 ```
 
-Opens at `http://localhost:5173`. Requests to `/api/*` are proxied to `VITE_API_URL`.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### Build for production
-
-```bash
-npm run build
+**Default login (from backend seeder):**
+```
+Email:    admin@school.ma
+Password: password
 ```
 
-Output is in `dist/`. Source maps are disabled in production builds.
+### Available Scripts
 
-## Project Structure
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Vite dev server with HMR |
+| `npm run build` | Production build with code splitting |
+| `npm run preview` | Preview production build locally |
+
+---
+
+## 📁 Project Structure
 
 ```
 src/
-├── components/
-│   ├── Navigation.jsx        # Sticky frosted-glass navbar with RBAC tabs
-│   ├── ProtectedRoute.jsx    # Route guard (redirects to /login if unauthenticated)
-│   ├── ErrorBoundary.jsx     # App-level error boundary with reload fallback
-│   ├── ToastProvider.jsx     # Global toast context (useToast hook)
-│   ├── AbsenceForm.jsx       # Edit justification modal form
-│   ├── AbsenceList.jsx       # Paginated absence table with search
-│   ├── CalendarHistory.jsx   # Date-range calendar grid per class
-│   ├── Filters.jsx           # Absence filter panel (date, class, status)
-│   ├── StagiaireForm.jsx     # Add / edit student form
-│   └── StagiaireList.jsx     # Student table per programme
-├── pages/
-│   ├── LoginPage.jsx         # Authentication page
-│   ├── SaisiePage.jsx        # Bulk attendance entry grid
-│   ├── AbsencesPage.jsx      # Absence list + calendar history
-│   ├── StagiairesPage.jsx    # Sector → Programme → Student drill-down
-│   ├── StatisticsPage.jsx    # KPI dashboard (admin only)
-│   └── ProfsPage.jsx         # Professor management (admin only)
-├── store/
-│   ├── store.jsx             # Redux store configuration
-│   ├── authSlice.jsx         # Login / logout / token persistence
-│   ├── absenceSlice.jsx      # Attendance CRUD + normalization
-│   ├── stagiaireSlice.jsx    # Student CRUD
-│   ├── profSlice.jsx         # Professor CRUD
-│   ├── sessionSlice.jsx      # Session find-or-create + time blocks
-│   ├── programmeSlice.jsx    # Programme list
-│   └── secteurSlice.jsx      # Sector list
+├── assets/              # Static images & backgrounds
+├── components/          # Reusable UI components
+│   ├── AbsenceList.jsx  # Attendance history table
+│   ├── AbsenceForm.jsx  # Add/edit absence modal
+│   ├── CalendarHistory.jsx  # Monthly absence calendar grid
+│   ├── Navigation.jsx   # Sidebar + topbar
+│   ├── Skeleton.jsx     # Shimmer skeleton variants
+│   ├── Statistics.jsx   # KPI + charts dashboard
+│   └── Filters.jsx      # Search & filter controls
+├── pages/               # Route-level page components
+│   ├── LoginPage.jsx
+│   ├── SaisiePage.jsx   # Attendance recording (digital register)
+│   ├── AbsencesPage.jsx # Absence management & history
+│   ├── StagiairesPage.jsx
+│   └── ProfsPage.jsx
 ├── services/
-│   └── api.js                # Axios instance (Bearer token, 401 redirect)
-├── index.css                 # Design tokens, global styles, shared components
-├── index.jsx                 # App entry point
-└── App.jsx                   # Router + providers
+│   └── api.js           # Axios instance + interceptors
+├── store/               # Redux Toolkit slices
+│   ├── absenceSlice.jsx
+│   ├── stagiaireSlice.jsx
+│   ├── authSlice.jsx
+│   ├── sessionSlice.jsx
+│   └── programmeSlice.jsx
+└── utils/
+    └── exportExcel.js   # SheetJS export helpers
 ```
 
-## Authentication
+---
 
-The app uses Laravel Sanctum token-based authentication. On login the token is stored in `localStorage` and attached as a `Bearer` header on every API request. A 401 response automatically redirects to `/login`.
+## 🔄 State Management
 
-Default test accounts (depend on your backend seed data):
+Redux Toolkit is used for all server state. Each slice follows the same pattern:
 
-| Role | Email | Password |
-|---|---|---|
-| Admin | `admin@school.ma` | `password` |
-| Professeur | `teacher@school.ma` | `password` |
+```
+Slice
+├── Thunks (async API calls via Axios)
+├── normalizer (maps backend shape → frontend shape)
+├── extraReducers (pending/fulfilled/rejected)
+└── selectors (used with useSelector in components)
+```
 
-## Deploy to GitHub Pages
+**Key design decisions:**
+- All fetch thunks are **guarded** — only fire if the store is empty (no redundant API calls on navigation)
+- All `fulfilled` reducers normalize data immediately via `normalizeAttendance()` / `normalizeStagiaire()`
+- Auth state persists in `localStorage` (token + user object)
 
-1. Push to the `main` branch.
-2. In **Settings → Pages**, set source to the `gh-pages` branch.
-3. The workflow in `.github/workflows/deploy.yml` builds and deploys automatically.
+---
 
-App URL: `https://<your-username>.github.io/absence-manager--redux/`
+## ☁️ Deployment
 
-## License
+The frontend deploys automatically to **Vercel** on every push to `main`.
 
-For educational purposes.
+### Environment Variables (Vercel dashboard)
+
+```env
+VITE_API_URL=https://web-production-09c0f.up.railway.app/api
+```
+
+### Build Output
+
+| Chunk | Size (gzip) |
+|---|---|
+| `vendor` (React, Redux, Router) | ~68 kB |
+| `index` (app code) | ~65 kB |
+| `recharts` | ~107 kB |
+| `xlsx` | ~95 kB |
+| `lucide` | ~1 kB |
+
+Total initial load: **~133 kB gzipped** (vendor + index only)
+
+---
+
+## 🗺 Roadmap
+
+- [x] Dark mode premium design system
+- [x] Skeleton loading (no layout shift)
+- [x] Calendar history with color-coded justification status
+- [x] Excel import + export
+- [x] Multi-role dashboard (admin / prof)
+- [x] Vite code splitting (vendor, recharts, xlsx chunks)
+- [ ] PWA support (offline attendance recording)
+- [ ] Email/SMS notification preferences UI
+- [ ] Justification document upload
+- [ ] QR code session attendance
+- [ ] Arabic RTL language support
+- [ ] Customizable dashboard widgets
+
+---
+
+## 👨‍💻 Author
+
+**elgarouani** — ISTA Inezgane · OFPPT
+
+---
+
+<div align="center">
+  <sub>Built with ❤️ for ISTA Inezgane · Powered by React + Laravel</sub>
+</div>
