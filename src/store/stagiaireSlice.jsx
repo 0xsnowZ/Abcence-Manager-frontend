@@ -8,9 +8,17 @@ export const fetchStagiaires = createAsyncThunk(
   "stagiaires/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/stagiaires", { params: { per_page: 500 } });
-      const payload = response.data.data;
-      return payload.data ?? payload;
+      let all = [];
+      let page = 1;
+      while (true) {
+        const response = await api.get("/stagiaires", { params: { per_page: 500, page } });
+        const payload  = response.data.data;
+        const items    = payload.data ?? payload;
+        all = all.concat(items);
+        if (!payload.next_page_url) break;
+        page++;
+      }
+      return all;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de chargement");
     }

@@ -3,15 +3,23 @@ import api from "../services/api.js";
 
 // ─── Thunks ────────────────────────────────────────────────────────────────────
 
-/** GET /api/attendances?per_page=500 */
 export const fetchAttendances = createAsyncThunk(
   "absences/fetchAll",
   async (params = {}, { rejectWithValue }) => {
     try {
-      const response = await api.get("/attendances", {
-        params: { per_page: 500, ...params },
-      });
-      return response.data.data.data ?? response.data.data;
+      let all  = [];
+      let page = 1;
+      while (true) {
+        const response = await api.get("/attendances", {
+          params: { per_page: 500, page, ...params },
+        });
+        const payload = response.data.data;
+        const items   = payload.data ?? payload;
+        all = all.concat(Array.isArray(items) ? items : []);
+        if (!payload.next_page_url) break;
+        page++;
+      }
+      return all;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de chargement des absences");
     }
