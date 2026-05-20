@@ -38,7 +38,7 @@ function AbsencesPage() {
     <div className="container-xxl px-4 py-5">
 
       {/* ── Page header ── */}
-      <div className="d-flex justify-content-between align-items-start mb-5">
+      <div className="d-flex justify-content-between align-items-start mb-5 page-main-header">
         <div>
           <div className="d-flex align-items-center gap-3 mb-2">
             <div className="abs-page-icon">

@@ -428,27 +428,22 @@ function SaisiePage() {
         filteredStagiaires.length > 0 ? (
           <form onSubmit={handleSubmit}>
             <div className="card-premium overflow-hidden">
-              <div className="card-header py-4 px-4">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h5 className="mb-0 section-title d-flex align-items-center gap-3">
+              <div className="card-header py-3 px-4">
+                <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 saisie-grid-header">
+                  <h5 className="mb-0 section-title d-flex align-items-center gap-2">
                     <span className="avatar-circle avatar-md avatar-navy">
                       <i className="bi bi-people-fill" style={{ fontSize: "0.9rem" }}></i>
                     </span>
                     {selectedProgramme.code_diplome}
                     {selectedProgramme.libelle && (
-                      <span className="body-sm fw-normal">— {selectedProgramme.libelle}</span>
+                      <span className="body-sm fw-normal d-none d-sm-inline">— {selectedProgramme.libelle}</span>
                     )}
                   </h5>
-                  <div className="d-flex gap-4">
+                  <div className="d-flex gap-2 gap-sm-4">
                     {slots.map((s) => (
                       <div key={s.id} className="text-center">
-                        <div className="fw-bold text-dark-navy small">
-                          {s.short}
-                        </div>
-                        <div
-                          className="text-muted"
-                          style={{ fontSize: "0.65rem" }}
-                        >
+                        <div className="fw-bold text-dark-navy small">{s.short}</div>
+                        <div className="text-muted saisie-slot-time" style={{ fontSize: "0.65rem" }}>
                           {s.label}
                         </div>
                       </div>
@@ -464,7 +459,7 @@ function SaisiePage() {
                       <th
                         rowSpan="2"
                         className="ps-4 border-bottom-0 sticky-col"
-                        style={{ width: "240px", zIndex: 10 }}
+                        style={{ width: "180px", zIndex: 10 }}
                       >
                         NOM DU STAGIAIRE
                       </th>
