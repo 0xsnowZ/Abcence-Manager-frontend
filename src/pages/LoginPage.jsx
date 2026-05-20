@@ -40,7 +40,8 @@ function LoginPage() {
               de Gestion des Absences
             </h2>
             <p className="login-hero-sub">
-              Plateforme de suivi et de gestion des absences des stagiaires de l'OFPPT.
+              Plateforme de suivi et de gestion des absences des stagiaires —
+              <strong style={{color:'rgba(255,255,255,0.85)'}}> ISTA Inezgane</strong>.
             </p>
 
             {/* Feature pills */}
@@ -59,7 +60,7 @@ function LoginPage() {
           </div>
 
           <div className="login-left-footer">
-            © 2026 OFPPT — La voie de l'avenir
+            © 2026 ISTA Inezgane — OFPPT
           </div>
         </div>
 
@@ -73,6 +74,11 @@ function LoginPage() {
             </div>
 
             {/* Heading */}
+            <div className="text-center mb-4">
+              <span className="login-institute-badge">
+                <i className="bi bi-building-fill me-1"></i>ISTA Inezgane
+              </span>
+            </div>
             <div className="text-center mb-5">
               <h3 className="login-title">Connexion</h3>
               <p className="login-subtitle">Connectez-vous pour accéder au système</p>
@@ -299,6 +305,22 @@ function LoginPage() {
           font-size: 0.875rem;
           color: var(--color-text-muted);
           margin: 0;
+        }
+
+        /* Institute badge */
+        .login-institute-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(30,58,138,0.12));
+          border: 1.5px solid rgba(59,130,246,0.3);
+          border-radius: var(--radius-pill);
+          padding: 0.3rem 0.9rem;
+          font-size: 0.78rem;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          color: var(--color-accent);
         }
 
         /* Error */
