@@ -84,7 +84,7 @@ function Statistics({ selectedMonth }) {
   const absencesByFiliere = useMemo(() =>
     filieres.map((fil, idx) => {
       const filStags   = stagiaires.filter((s) => getStagiaireClasse(s) === fil);
-      const filAbsArr  = filteredAbsences.filter((a) => filStags.some((s) => s.id === getStagId(a)));
+      const filAbsArr  = filteredAbsences.filter((a) => filStags.some((s) => String(s.id) === String(getStagId(a))));
       return {
         filiere:  fil.length > 12 ? fil.substring(0, 12) + "…" : fil,
         fullName: fil,
@@ -153,7 +153,7 @@ function Statistics({ selectedMonth }) {
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 6)
       .map((abs) => {
-        const stag = stagiaires.find((s) => s.id === getStagId(abs));
+        const stag = stagiaires.find((s) => String(s.id) === String(getStagId(abs)));
         return {
           ...abs,
           stagNom:    stag ? getStagName(stag) : abs.stagiaireNom || "Inconnu",

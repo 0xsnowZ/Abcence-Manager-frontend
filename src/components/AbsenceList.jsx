@@ -49,13 +49,13 @@ function AbsenceList({
 
   const getStagiaireName = (absence) => {
     if (absence.stagiaireNom) return absence.stagiaireNom;
-    const s = stagiaires.find((st) => st.id === absence.idstag);
+    const s = stagiaires.find((st) => String(st.id) === String(absence.idstag));
     if (!s) return "Inconnu";
     return s.prenom ? `${s.nom} ${s.prenom}` : s.nomComplet || s.nom;
   };
 
   const getStagiaireFiliere = (id) => {
-    const s = stagiaires.find((st) => st.id === id);
+    const s = stagiaires.find((st) => String(st.id) === String(id));
     if (!s) return "-";
     const prog = (s.programmes || [])[0];
     return prog?.code_diplome || s.filiere || s.programme_code || "-";
@@ -84,7 +84,7 @@ function AbsenceList({
 
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
-        const s = stagiaires.find((st) => st.id === absence.idstag);
+        const s = stagiaires.find((st) => String(st.id) === String(absence.idstag));
         const name = getStagiaireName(absence).toLowerCase();
         const matricule = String(s?.matricule || "").toLowerCase();
         const cin = String(s?.cin || "").toLowerCase();
@@ -315,7 +315,7 @@ function AbsenceList({
                           <button
                             className="btn-action-round btn-view shadow-sm"
                             onClick={() => {
-                              const s = stagiaires.find((st) => st.id === absence.idstag);
+                              const s = stagiaires.find((st) => String(st.id) === String(absence.idstag));
                               if (s) setViewingStagiaire(s);
                             }}
                             title="Voir le profil"

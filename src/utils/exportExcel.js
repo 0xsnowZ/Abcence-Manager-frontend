@@ -10,7 +10,8 @@ const STATUS_LABELS = {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function getStagiaire(stagiaires, idstag) {
-  return stagiaires.find((s) => s.id === idstag) || null;
+  if (!idstag) return null;
+  return stagiaires.find((s) => String(s.id) === String(idstag)) || null;
 }
 
 function getClasse(stagiaires, idstag) {
@@ -28,7 +29,7 @@ function buildRow(absence, stagiaires) {
   return {
     ID:            absence.id,
     Stagiaire:     name,
-    Matricule:     s?.matricule ?? "—",
+    Matricule:     s?.matricule ? String(s.matricule) : "—",
     Classe:        getClasse(stagiaires, absence.idstag),
     Date:          absence.date
                      ? new Date(absence.date).toLocaleDateString("fr-FR")

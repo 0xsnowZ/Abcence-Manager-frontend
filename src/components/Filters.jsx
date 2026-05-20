@@ -73,7 +73,7 @@ function Filters({ onFilterChange }) {
     }
 
     if (stagiaireFilter) {
-      const stag = stagiaires.find((s) => s.id === parseInt(stagiaireFilter));
+      const stag = stagiaires.find((s) => String(s.id) === String(stagiaireFilter));
       if (stag) active.push(`Stagiaire: ${stag.nom}`);
     }
     if (filiereFilter) active.push(`Filière: ${filiereFilter}`);
