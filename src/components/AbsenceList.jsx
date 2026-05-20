@@ -322,13 +322,7 @@ function AbsenceList({
                           >
                             <i className="bi bi-eye-fill"></i>
                           </button>
-                          <button
-                            className="btn-action-round btn-edit shadow-sm"
-                            onClick={() => onEdit(absence)}
-                            title="Modifier"
-                          >
-                            <i className="bi bi-pencil-fill"></i>
-                          </button>
+                          
                           {user?.role === "admin" && (
                             <button
                               className="btn-action-round btn-delete shadow-sm"
