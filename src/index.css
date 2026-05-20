@@ -757,3 +757,13 @@ body {
   }
 }
 
+.date-cell-main {
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.date-cell-sub {
+  font-size: 0.72rem !important;
+}
+

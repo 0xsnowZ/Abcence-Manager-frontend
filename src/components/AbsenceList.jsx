@@ -301,12 +301,12 @@ function AbsenceList({
                         </span>
                       </td>
                       <td>
-                        <span className="body-sm fw-medium d-block">
+                        <span className="date-cell-main d-block">
                           <i className="bi bi-calendar3 me-2 text-dark-navy opacity-50"></i>
                           {formatDate(absence.date)}
                         </span>
                         {absence.time_block_id && (
-                          <span className="body-xs text-muted d-block ms-4 seance-mobile-small">
+                          <span className="date-cell-sub text-muted d-block ms-4 seance-mobile-small">
                             {getSeanceLabel(absence.time_block_id)}
                           </span>
                         )}

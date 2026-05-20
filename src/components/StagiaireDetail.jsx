@@ -367,8 +367,8 @@ function StagiaireDetail({ stagiaire, onBack }) {
                 <tbody>
                   {currentAbsences.map((a) => (
                     <tr key={a.id}>
-                      <td className="ps-4 fw-medium">
-                        <span className="d-block">
+                      <td className="ps-4">
+                        <span className="date-cell-main d-block">
                           <i className="bi bi-calendar3 me-2 opacity-50"></i>
                           {a.date
                             ? new Date(
@@ -377,7 +377,7 @@ function StagiaireDetail({ stagiaire, onBack }) {
                             : "—"}
                         </span>
                         {a.time_block_id && (
-                          <span className="body-xs text-muted d-block ms-4 seance-mobile-small">
+                          <span className="date-cell-sub text-muted d-block ms-4 seance-mobile-small">
                             {getSeanceLabel(a.time_block_id)}
                           </span>
                         )}
