@@ -380,10 +380,14 @@ body {
 .sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
 .professional-grid .cell-slot { cursor: pointer; transition: background 0.15s; position: relative; }
 .professional-grid .cell-slot:hover { background: #f1f5ff; }
-.is-absent    { background-color: var(--color-danger) !important; border-color: var(--color-danger) !important; }
-.is-submitted { background-color: var(--color-primary) !important; border-color: var(--color-primary) !important; cursor: default !important; }
+.is-absent        { background-color: var(--color-danger) !important; border-color: var(--color-danger) !important; }
+.is-unjustified   { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+.is-justified-grid { background-color: #28a745 !important; border-color: #28a745 !important; }
 .dot-marker { display: inline-block; width: 6px; height: 6px; background-color: var(--color-border); border-radius: 50%; }
-.hover-row:hover td:not(.is-absent):not(.is-submitted) { background-color: #e8f0fe !important; transition: background-color 0.15s ease; }
+.hover-row:hover td:not(.is-absent):not(.is-unjustified):not(.is-justified-grid) { background-color: #e8f0fe !important; transition: background-color 0.15s ease; }
+.professional-grid .cell-slot.is-unjustified { background-color: #dc3545 !important; border-color: #dc3545 !important; }
+.professional-grid .cell-slot.is-justified-grid { background-color: #28a745 !important; border-color: #28a745 !important; }
+.professional-grid .cell-slot.is-unjustified:hover, .professional-grid .cell-slot.is-justified-grid:hover { opacity: 0.9; filter: brightness(1.1); }
 .classe-dropdown-item:hover { background-color: var(--color-primary-light); }
 .classe-dropdown { margin-top: 2px; }
 .btn-white { background-color: #fff; border-color: #dee2e6; }

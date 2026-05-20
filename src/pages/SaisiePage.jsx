@@ -13,8 +13,8 @@ import {
   bulkSubmitAttendances,
   fetchAttendances,
 } from "../store/absenceSlice.jsx";
+import AbsenceDetailModal from "../components/AbsenceDetailModal.jsx";
 
-// Saisie Page
 function SaisiePage() {
   const showToast = useToast();
   const dispatch = useDispatch();
@@ -25,7 +25,8 @@ function SaisiePage() {
   const { items: programmes } = useSelector((state) => state.programmes);
   const { timeBlocks } = useSelector((state) => state.sessions);
 
-  // Load time blocks, programmes, stagiaires and existing attendances on mount
+  const [detailAbsence, setDetailAbsence] = useState(null);
+
   useEffect(() => {
     dispatch(fetchTimeBlocks());
     dispatch(fetchProgrammes());
@@ -33,52 +34,25 @@ function SaisiePage() {
     if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 
-  // Build slots from timeBlocks (TB1→S1, TB2→S2, …) or fall back to static
   const slots = useMemo(() => {
     if (timeBlocks && timeBlocks.length > 0) {
       return timeBlocks.map((tb, idx) => ({
-        id: idx + 1, // 1-based UI slot id
-        timeBlockId: tb.id, // backend id
+        id: idx + 1,
+        timeBlockId: tb.id,
         label: `${tb.heure_debut?.slice(0, 5) || ""}–${tb.heure_fin?.slice(0, 5) || ""}`,
         short: `S${idx + 1}`,
-        code: tb.code, // e.g. "TB1"
+        code: tb.code,
       }));
     }
-    // Static fallback while loading
     return [
-      {
-        id: 1,
-        timeBlockId: null,
-        label: "08:30–11:00",
-        short: "S1",
-        code: "TB1",
-      },
-      {
-        id: 2,
-        timeBlockId: null,
-        label: "11:00–13:30",
-        short: "S2",
-        code: "TB2",
-      },
-      {
-        id: 3,
-        timeBlockId: null,
-        label: "13:30–16:00",
-        short: "S3",
-        code: "TB3",
-      },
-      {
-        id: 4,
-        timeBlockId: null,
-        label: "16:00–18:30",
-        short: "S4",
-        code: "TB4",
-      },
+      { id: 1, timeBlockId: null, label: "08:30–11:00", short: "S1", code: "TB1" },
+      { id: 2, timeBlockId: null, label: "11:00–13:30", short: "S2", code: "TB2" },
+      { id: 3, timeBlockId: null, label: "13:30–16:00", short: "S3", code: "TB3" },
+      { id: 4, timeBlockId: null, label: "16:00–18:30", short: "S4", code: "TB4" },
     ];
   }, [timeBlocks]);
 
   const isProf = user?.role === "prof";
-  // Filières assigned to this prof (from their programmes)
   const profProgrammeIds = useMemo(() => {
     if (!isProf) return [];
     return (user?.programmes || []).map((p) => p.id);
@@ -87,9 +61,7 @@ function SaisiePage() {
   const getDefaultRange = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    if (window.innerWidth <= 767) {
-      return [today, today];
-    }
+    if (window.innerWidth <= 767) return [today, today];
     const day = today.getDay();
     const monday = new Date(today);
     monday.setDate(today.getDate() - (day === 0 ? 6 : day - 1));
@@ -97,17 +69,15 @@ function SaisiePage() {
     saturday.setDate(monday.getDate() + 5);
     return [monday, saturday];
   };
+
   const [dateRange, setDateRange] = useState(getDefaultRange);
   const [selectedProgrammeId, setSelectedProgrammeId] = useState("");
   const [classeSearch, setClasseSearch] = useState("");
   const [classeDropdownOpen, setClasseDropdownOpen] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-
-  // saisieData: { [`${stagId}|${dateStr}|${slotIdx}`]: boolean }
   const [saisieData, setSaisieData] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filtered programmes list (restrict for profs)
   const availableProgrammes = useMemo(() => {
     if (profProgrammeIds.length > 0) {
       return programmes.filter((p) => profProgrammeIds.includes(p.id));
@@ -115,7 +85,6 @@ function SaisiePage() {
     return programmes;
   }, [programmes, profProgrammeIds]);
 
-  // Auto-select if only one programme available
   useEffect(() => {
     if (availableProgrammes.length === 1 && !selectedProgrammeId) {
       setSelectedProgrammeId(String(availableProgrammes[0].id));
@@ -123,13 +92,10 @@ function SaisiePage() {
   }, [availableProgrammes, selectedProgrammeId]);
 
   const selectedProgramme = useMemo(
-    () =>
-      programmes.find((p) => String(p.id) === String(selectedProgrammeId)) ||
-      null,
+    () => programmes.find((p) => String(p.id) === String(selectedProgrammeId)) || null,
     [programmes, selectedProgrammeId],
   );
 
-  // Stagiaires for the selected programme — sorted alphabetically by nom then prenom
   const filteredStagiaires = useMemo(() => {
     if (!selectedProgramme) return [];
     return stagiaires
@@ -142,23 +108,21 @@ function SaisiePage() {
       );
   }, [stagiaires, selectedProgramme]);
 
-  // Build a map of already-submitted absences for the grid
+  // Store absence object per cell, not just boolean
   const reduxAbsencesMap = useMemo(() => {
     const map = {};
     allAbsences.forEach((a) => {
       const dateStr = (a.date || "").slice(0, 10);
       const stagId = a.idstag || a.stagiaire_id;
       const tbId = a.time_block_id;
-      // Map time_block_id → slot index
       const slotIdx = slots.findIndex((s) => s.timeBlockId === tbId);
       if (slotIdx !== -1) {
-        map[`${stagId}|${dateStr}|${slotIdx + 1}`] = true;
+        map[`${stagId}|${dateStr}|${slotIdx + 1}`] = a;
       }
     });
     return map;
   }, [allAbsences, slots]);
 
-  // Calculate dates between start and end
   const getDatesInRange = (startDate, endDate) => {
     const dates = [];
     if (!startDate || !endDate) return dates;
@@ -180,9 +144,14 @@ function SaisiePage() {
     return [];
   }, [dateRange]);
 
-  const handleSaisieChange = (stagId, dateStr, slotId) => {
+  const handleCellClick = (stagId, dateStr, slotId) => {
     const key = `${stagId}|${dateStr}|${slotId}`;
-    if (reduxAbsencesMap[key]) return; // already submitted
+    const existing = reduxAbsencesMap[key];
+    if (existing) {
+      setDetailAbsence(existing);
+      return;
+    }
+    // Toggle new absence selection
     setSaisieData((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
@@ -201,7 +170,6 @@ function SaisiePage() {
     setDateRange(getDefaultRange());
   };
 
-  // Warn user before leaving with unsaved attendance data
   useEffect(() => {
     const hasUnsaved = Object.values(saisieData).some(Boolean);
     if (!hasUnsaved) return;
@@ -215,7 +183,6 @@ function SaisiePage() {
       e.preventDefault();
       if (!dateColumns.length || !selectedProgramme) return;
 
-      // Collect checked cells: { `stagId|dateStr|slotIdx` }
       const checkedEntries = Object.entries(saisieData).filter(([, v]) => v);
       if (checkedEntries.length === 0) {
         showToast("Aucune nouvelle absence à enregistrer.", "warning");
@@ -225,8 +192,6 @@ function SaisiePage() {
       setIsSubmitting(true);
 
       try {
-        // Group by (date, slotIdx) → need one session per (programme, date, time_block)
-        // Then group by session → list of stagiaire_ids
         const byDateSlot = {};
         checkedEntries.forEach(([key]) => {
           const [stagId, dateStr, slotIdx] = key.split("|");
@@ -245,7 +210,6 @@ function SaisiePage() {
             continue;
           }
 
-          // Find or create session
           const session = await dispatch(
             findOrCreateSession({
               programme_id: selectedProgramme.id,
@@ -255,10 +219,9 @@ function SaisiePage() {
             }),
           ).unwrap();
 
-          // Build bulk attendances payload
           const attendances = stagIds.map((stagId) => ({
             stagiaire_id: stagId,
-            type_absence_id: 2, // 2 = ABSENT
+            type_absence_id: 2,
             justification: null,
           }));
 
@@ -269,9 +232,8 @@ function SaisiePage() {
           totalAdded += stagIds.length;
         }
 
-        // Refresh absences list
-        dispatch(fetchAttendances());
-
+        // No fetchAttendances() needed — bulkSubmitAttendances.fulfilled reducer
+        // upserts items into the Redux store immediately
         showToast(`${totalAdded} absence(s) enregistrée(s) avec succès.`, "success");
         setSaisieData({});
       } catch (err) {
@@ -286,8 +248,7 @@ function SaisiePage() {
     [saisieData, dateColumns, selectedProgramme, slots, dispatch, user],
   );
 
-  const lockedProgramme =
-    availableProgrammes.length === 1 ? availableProgrammes[0] : null;
+  const lockedProgramme = availableProgrammes.length === 1 ? availableProgrammes[0] : null;
 
   return (
     <div className="container-xxl px-4 py-5">
@@ -311,8 +272,6 @@ function SaisiePage() {
         </div>
         <div className="card-body p-3">
           <div className="row g-3 align-items-end">
-
-            {/* Classe / Filière */}
             <div className="col-12 col-sm-6 col-lg">
               <label className="form-label label-caps mb-1">Classe / Filière</label>
               <div className="input-group input-group-sm">
@@ -376,7 +335,6 @@ function SaisiePage() {
               )}
             </div>
 
-            {/* Période d'appel */}
             <div className="col-12 col-sm-6 col-lg position-relative">
               <label className="form-label label-caps mb-1">Période d'appel</label>
               <button
@@ -412,17 +370,14 @@ function SaisiePage() {
               )}
             </div>
 
-            {/* Reset */}
             <div className="col-12 col-sm-auto">
               <button className="btn btn-outline-secondary btn-sm fw-bold px-3" type="button" onClick={handleReset}>
                 <i className="bi bi-x-lg me-1"></i>Réinitialiser
               </button>
             </div>
-
           </div>
         </div>
       </div>
-
 
       {dateColumns.length > 0 && selectedProgramme ? (
         filteredStagiaires.length > 0 ? (
@@ -461,11 +416,7 @@ function SaisiePage() {
                 <table className="table table-sm mb-0 align-middle professional-grid">
                   <thead style={{ position: "sticky", top: 0, zIndex: 20, boxShadow: "inset 0 2px 0 var(--color-border), 0 2px 0 var(--color-border-strong)" }}>
                     <tr style={{ background: "var(--color-bg)" }}>
-                      <th
-                        rowSpan="2"
-                        className="ps-4 border-bottom-0 sticky-col"
-                        style={{ width: "180px", zIndex: 10 }}
-                      >
+                      <th rowSpan="2" className="ps-4 border-bottom-0 sticky-col" style={{ width: "180px", zIndex: 10 }}>
                         NOM DU STAGIAIRE
                       </th>
                       {dateColumns.map((d, index) => (
@@ -478,17 +429,10 @@ function SaisiePage() {
                             backgroundColor: "#f8f9fa",
                           }}
                         >
-                          <div
-                            className="text-uppercase text-muted lh-1 mb-1"
-                            style={{ fontSize: "0.6rem" }}
-                          >
-                            {d.toLocaleDateString("fr-FR", {
-                              weekday: "short",
-                            })}
+                          <div className="text-uppercase text-muted lh-1 mb-1" style={{ fontSize: "0.6rem" }}>
+                            {d.toLocaleDateString("fr-FR", { weekday: "short" })}
                           </div>
-                          <div className="fw-bold text-dark">
-                            {formatHeaderDate(d)}
-                          </div>
+                          <div className="fw-bold text-dark">{formatHeaderDate(d)}</div>
                         </th>
                       ))}
                     </tr>
@@ -513,8 +457,7 @@ function SaisiePage() {
                       const displayName =
                         stagiaire.nomComplet ||
                         `${stagiaire.nom || ""} ${stagiaire.prenom || ""}`.trim() ||
-                        stagiaire.nom ||
-                        "—";
+                        stagiaire.nom || "—";
                       return (
                         <tr key={stagiaire.id} className="hover-row">
                           <td className="ps-4 fw-bold text-dark border-end-heavy sticky-col bg-white">
@@ -527,26 +470,28 @@ function SaisiePage() {
                                 {slots.map((s, sIdx) => {
                                   const key = `${stagiaire.id}|${dateStr}|${s.id}`;
                                   const isNew = !!saisieData[key];
-                                  const isSubmitted = !!reduxAbsencesMap[key];
+                                  const absenceData = reduxAbsencesMap[key];
+                                  const isSubmitted = !!absenceData;
                                   const isChecked = isNew || isSubmitted;
+
+                                  let cellClass = `text-center p-0 cell-slot${sIdx === 0 ? " date-group-start" : ""}`;
+                                  if (isNew) {
+                                    cellClass += " is-absent";
+                                  } else if (isSubmitted) {
+                                    const status = absenceData.status || "non_justifie";
+                                    cellClass += status === "justifie" ? " is-justified-grid" : " is-unjustified";
+                                  }
 
                                   return (
                                     <td
                                       key={s.id}
-                                      className={`text-center p-0 cell-slot${sIdx === 0 ? " date-group-start" : ""} ${isNew ? "is-absent" : ""} ${isSubmitted ? "is-submitted" : ""}`}
-                                      onClick={() =>
-                                        handleSaisieChange(
-                                          stagiaire.id,
-                                          dateStr,
-                                          s.id,
-                                        )
-                                      }
+                                      className={cellClass}
+                                      onClick={() => handleCellClick(stagiaire.id, dateStr, s.id)}
                                       style={{ height: "48px" }}
+                                      title={isSubmitted ? "Cliquer pour voir les détails" : ""}
                                     >
                                       {isChecked ? (
-                                        <span className="text-white fw-bold">
-                                          A
-                                        </span>
+                                        <span className="text-white fw-bold">A</span>
                                       ) : (
                                         <span className="dot-marker"></span>
                                       )}
@@ -572,11 +517,7 @@ function SaisiePage() {
                 >
                   {isSubmitting ? (
                     <>
-                      <span
-                        className="spinner-border spinner-border-sm me-2"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
+                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                       Enregistrement…
                     </>
                   ) : (
@@ -588,8 +529,7 @@ function SaisiePage() {
                 </button>
                 <div className="mt-3 text-secondary small">
                   <i className="bi bi-info-circle-fill me-1"></i>
-                  Chaque séance sélectionnée "A" sera enregistrée comme une
-                  absence de 2h30.
+                  Chaque séance sélectionnée "A" sera enregistrée comme une absence de 2h30.
                 </div>
               </div>
             </div>
@@ -611,6 +551,12 @@ function SaisiePage() {
         </div>
       )}
 
+      {detailAbsence && (
+        <AbsenceDetailModal
+          absence={detailAbsence}
+          onClose={() => setDetailAbsence(null)}
+        />
+      )}
     </div>
   );
 }
