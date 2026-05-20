@@ -304,6 +304,8 @@ body {
 .btn-action-round { width: 32px; height: 32px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; transition: all 0.18s; font-size: 0.8rem; cursor: pointer; }
 .btn-view   { background: var(--color-info-light);    color: var(--color-info); }
 .btn-view:hover   { background: var(--color-info);    color: #fff; transform: scale(1.1); }
+.btn-detail { background: var(--color-warning-light); color: var(--color-warning); }
+.btn-detail:hover { background: var(--color-warning); color: #fff; transform: scale(1.1); }
 .btn-edit   { background: var(--color-primary-light); color: var(--color-accent); }
 .btn-edit:hover   { background: var(--color-accent); color: #fff; transform: scale(1.1); }
 .btn-delete { background: var(--color-danger-light); color: var(--color-danger); }

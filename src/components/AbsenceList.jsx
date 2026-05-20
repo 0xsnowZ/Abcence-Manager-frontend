@@ -345,6 +345,14 @@ function AbsenceList({
                           >
                             <i className="bi bi-eye-fill"></i>
                           </button>
+
+                          <button
+                            className="btn-action-round btn-detail shadow-sm"
+                            onClick={() => setDetailAbsence(absence)}
+                            title="Détails de l'absence"
+                          >
+                            <i className="bi bi-info-circle-fill"></i>
+                          </button>
                           
                           {user?.role === "admin" && (
                             <button
