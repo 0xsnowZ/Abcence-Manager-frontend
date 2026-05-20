@@ -42,7 +42,7 @@ function AbsenceDetailModal({ absence, onClose }) {
                 })
             ).unwrap();
             showToast("Absence mise à jour avec succès", "success");
-            setEditing(false);
+            onClose();
         } catch (error) {
             showToast("Erreur lors de la mise à jour", "error");
         } finally {
