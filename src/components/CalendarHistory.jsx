@@ -1,12 +1,42 @@
-import { useState, useMemo } from "react";
-import { useSelector } from "react-redux";
+import { useState, useMemo, useEffect, Fragment } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
+import { fetchTimeBlocks } from "../store/sessionSlice.jsx";
+import AbsenceDetailModal from "./AbsenceDetailModal.jsx";
 
 function CalendarHistory() {
+  const dispatch = useDispatch();
   const absences = useSelector((state) => state.absences.items);
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const { user } = useSelector((state) => state.auth);
+  const { timeBlocks } = useSelector((state) => state.sessions);
+
+  const [detailAbsence, setDetailAbsence] = useState(null);
+
+  useEffect(() => {
+    if (!timeBlocks || timeBlocks.length === 0) {
+      dispatch(fetchTimeBlocks());
+    }
+  }, [dispatch, timeBlocks]);
+
+  const slots = useMemo(() => {
+    if (timeBlocks && timeBlocks.length > 0) {
+      return timeBlocks.map((tb, idx) => ({
+        id: idx + 1,
+        timeBlockId: tb.id,
+        label: `${tb.heure_debut?.slice(0, 5) || ""}–${tb.heure_fin?.slice(0, 5) || ""}`,
+        short: `S${idx + 1}`,
+        code: tb.code,
+      }));
+    }
+    return [
+      { id: 1, timeBlockId: null, label: "08:30–11:00", short: "S1", code: "TB1" },
+      { id: 2, timeBlockId: null, label: "11:00–13:30", short: "S2", code: "TB2" },
+      { id: 3, timeBlockId: null, label: "13:30–16:00", short: "S3", code: "TB3" },
+      { id: 4, timeBlockId: null, label: "16:00–18:30", short: "S4", code: "TB4" },
+    ];
+  }, [timeBlocks]);
 
   const isProf = user?.role === "prof";
   const profFilieres = useMemo(
@@ -84,20 +114,18 @@ function CalendarHistory() {
     return localDate.toISOString().split("T")[0];
   };
 
-  // Map: `${stagiaireId}_${date}` → absence[]
-  const absenceMap = useMemo(() => {
+  // Map: `${stagiaireId}|${date}|${timeBlockId}` → absence
+  const reduxAbsencesMap = useMemo(() => {
     const map = {};
     absences.forEach((a) => {
       const sid = a.idstag ?? a.stagiaire_id;
       const dateRaw = a.date ?? a.session?.date_session ?? "";
-      if (!sid || !dateRaw) return;
+      const tbid = a.time_block_id ?? a.session?.time_block_id;
+      if (!sid || !dateRaw || !tbid) return;
 
-      // Keep only YYYY-MM-DD from possible datetime strings
       const dateStr = String(dateRaw).split("T")[0].split(" ")[0];
-
-      const key = `${sid}_${dateStr}`;
-      if (!map[key]) map[key] = [];
-      map[key].push(a);
+      const key = `${sid}|${dateStr}|${tbid}`;
+      map[key] = a;
     });
     return map;
   }, [absences]);
@@ -215,7 +243,8 @@ function CalendarHistory() {
                 >
                   <tr>
                     <th
-                      className="ps-4 cal-sticky-col cal-name-col"
+                      rowSpan="2"
+                      className="ps-4 border-bottom-0 cal-sticky-col cal-name-col"
                       style={{ width: "220px", zIndex: 10 }}
                     >
                       NOM DU STAGIAIRE
@@ -223,73 +252,102 @@ function CalendarHistory() {
                     {dateColumns.map((d, index) => (
                       <th
                         key={index}
-                        className="text-center py-2"
-                        style={{ minWidth: "56px" }}
+                        colSpan={slots.length}
+                        className="text-center py-2 border-bottom-0 date-group-start"
+                        style={{
+                          minWidth: `${slots.length * 40}px`,
+                          backgroundColor: "#f8f9fa",
+                        }}
                       >
-                        <div className="label-caps lh-1 mb-1">
+                        <div className="text-uppercase text-muted lh-1 mb-1" style={{ fontSize: "0.6rem" }}>
                           {d.toLocaleDateString("fr-FR", { weekday: "short" })}
                         </div>
-                        <div
-                          className="fw-600 text-dark"
-                          style={{ fontSize: "0.8rem" }}
-                        >
-                          {d.toLocaleDateString("fr-FR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                          })}
+                        <div className="fw-bold text-dark" style={{ fontSize: "0.8rem" }}>
+                          {d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" })}
                         </div>
                       </th>
                     ))}
                   </tr>
+                  <tr className="bg-light text-muted">
+                    {dateColumns.map((_, dIdx) => (
+                      <Fragment key={dIdx}>
+                        {slots.map((s, sIdx) => (
+                          <th
+                            key={s.id}
+                            className={`text-center py-1 border-top-0${sIdx === 0 ? " date-group-start" : ""}`}
+                            style={{ width: "40px", fontSize: "0.6rem", lineHeight: 1.2 }}
+                          >
+                            <div className="fw-bold text-dark-navy">{s.short}</div>
+                          </th>
+                        ))}
+                      </Fragment>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody>
-                  {filteredStagiaires.map((stagiaire) => (
-                    <tr key={stagiaire.id} className="cal-hover-row">
-                      <td className="ps-4 fw-600 cal-sticky-col cal-name-col">
-                      {stagiaire.nomComplet ||
-                          `${stagiaire.nom} ${stagiaire.prenom}`.trim() ||
-                          stagiaire.nom}
-                      </td>
-                      {dateColumns.map((d, dIdx) => {
-                        const dateStr = formatStoreDate(d);
-                        const key = `${stagiaire.id}_${dateStr}`;
-                        const dayAbsences = absenceMap[key] || [];
-                        const totalHours = dayAbsences.reduce(
-                          (sum, a) => sum + (a.heures || 2.5),
-                          0,
-                        );
-                        const allJustified =
-                          dayAbsences.length > 0 &&
-                          dayAbsences.every(
-                            (a) => a.justifie ?? !!a.justification,
+                  {filteredStagiaires.map((stagiaire) => {
+                    const displayName =
+                      stagiaire.nomComplet ||
+                      `${stagiaire.nom} ${stagiaire.prenom}`.trim() ||
+                      stagiaire.nom;
+                    return (
+                      <tr key={stagiaire.id} className="cal-hover-row">
+                        <td className="ps-4 fw-bold text-dark cal-sticky-col cal-name-col bg-white">
+                          {displayName}
+                        </td>
+                        {dateColumns.map((d, dIdx) => {
+                          const dateStr = formatStoreDate(d);
+                          return (
+                            <Fragment key={dIdx}>
+                              {slots.map((s, sIdx) => {
+                                const key = `${stagiaire.id}|${dateStr}|${s.timeBlockId}`;
+                                const absenceData = reduxAbsencesMap[key];
+                                const hasAbsence = !!absenceData;
+
+                                let cellClass = `text-center p-0 cell-slot${sIdx === 0 ? " date-group-start" : ""}`;
+
+                                return (
+                                  <td
+                                    key={s.id}
+                                    className={cellClass}
+                                    style={{ height: "48px", cursor: hasAbsence ? "pointer" : "default" }}
+                                    onClick={() => {
+                                      if (hasAbsence) setDetailAbsence(absenceData);
+                                    }}
+                                    title={hasAbsence ? "Cliquer pour voir les détails" : ""}
+                                  >
+                                    {hasAbsence ? (
+                                      (() => {
+                                        let badgeClass = "abs-badge--unjustified";
+                                        let label = "A";
+                                        
+                                        if (absenceData.status === "justifie") {
+                                          badgeClass = "abs-badge--justified";
+                                        } else if (absenceData.status === "retard") {
+                                          badgeClass = "abs-badge--retard";
+                                          label = "R";
+                                        } else if (absenceData.status === "absence_excusee") {
+                                          badgeClass = "abs-badge--excusee";
+                                        }
+                                        
+                                        return (
+                                          <span className={`abs-badge ${badgeClass}`}>
+                                            {label}
+                                          </span>
+                                        );
+                                      })()
+                                    ) : (
+                                      <span className="dot-marker"></span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </Fragment>
                           );
-
-                        let cellClass = "";
-                        let cellContent = null;
-
-                        if (totalHours > 0) {
-                          cellClass = allJustified
-                            ? "cal-justified"
-                            : "cal-absent";
-                          cellContent = `${totalHours}h`;
-                        } else {
-                          cellContent = (
-                            <span className="text-muted opacity-25">-</span>
-                          );
-                        }
-
-                        return (
-                          <td
-                            key={dIdx}
-                            className={`text-center p-0 cell-slot ${cellClass}`}
-                            style={{ height: "48px" }}
-                          >
-                            {cellContent}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                        })}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -309,6 +367,13 @@ function CalendarHistory() {
           </div>
         )}
       </div>
+
+      {detailAbsence && (
+        <AbsenceDetailModal
+          absence={detailAbsence}
+          onClose={() => setDetailAbsence(null)}
+        />
+      )}
     </>
   );
 }
