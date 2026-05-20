@@ -23,7 +23,7 @@ function AppLayout() {
       <div className={collapsed ? "app-body app-body--collapsed" : "app-body"}>
         <Routes>
           <Route path="/" element={<StagiairesPage />} />
-          <Route path="/absences" element={<AbsencesPage />} />
+          <Route path="/absences" element={user?.role === 'admin' ? <AbsencesPage /> : <Navigate to="/" replace />} />
           <Route path="/saisie" element={<SaisiePage />} />
           <Route
             path="/statistiques"

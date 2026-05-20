@@ -35,9 +35,9 @@ function Navigation({ onCollapse }) {
 
   const tabs = [
     { id: "stagiaires", label: "Stagiaires", icon: "bi-people-fill", path: "/" },
-    { id: "absences", label: "Absences", icon: "bi-calendar-x-fill", path: "/absences" },
     { id: "saisie", label: "Registre", icon: "bi-pencil-square", path: "/saisie" },
     ...(user?.role === "admin" ? [
+      { id: "absences", label: "Absences", icon: "bi-calendar-x-fill", path: "/absences" },
       { id: "profs", label: "Professeurs", icon: "bi-person-gear", path: "/profs" },
       { id: "statistics", label: "Statistiques", icon: "bi-graph-up-arrow", path: "/statistiques" },
     ] : []),
