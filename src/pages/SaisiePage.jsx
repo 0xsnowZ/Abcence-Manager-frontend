@@ -475,12 +475,6 @@ function SaisiePage() {
                                   const isChecked = isNew || isSubmitted;
 
                                   let cellClass = `text-center p-0 cell-slot${sIdx === 0 ? " date-group-start" : ""}`;
-                                  if (isNew) {
-                                    cellClass += " is-absent";
-                                  } else if (isSubmitted) {
-                                    const status = absenceData.status || "non_justifie";
-                                    cellClass += status === "justifie" ? " is-justified-grid" : " is-unjustified";
-                                  }
 
                                   return (
                                     <td
@@ -490,8 +484,10 @@ function SaisiePage() {
                                       style={{ height: "48px" }}
                                       title={isSubmitted ? "Cliquer pour voir les détails" : ""}
                                     >
-                                      {isChecked ? (
-                                        <span className="text-white fw-bold">A</span>
+                                      {isNew ? (
+                                        <span className="abs-badge abs-badge--new">A</span>
+                                      ) : isSubmitted ? (
+                                        <span className={`abs-badge ${absenceData.status === "justifie" ? "abs-badge--justified" : "abs-badge--unjustified"}`}>A</span>
                                       ) : (
                                         <span className="dot-marker"></span>
                                       )}
