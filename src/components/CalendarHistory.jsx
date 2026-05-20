@@ -215,7 +215,7 @@ function CalendarHistory() {
                 >
                   <tr>
                     <th
-                      className="ps-4 cal-sticky-col"
+                      className="ps-4 cal-sticky-col cal-name-col"
                       style={{ width: "220px", zIndex: 10 }}
                     >
                       NOM DU STAGIAIRE

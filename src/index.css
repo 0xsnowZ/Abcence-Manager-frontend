@@ -336,15 +336,12 @@ body {
 
 /* ─── Calendar history grid ──────────────────────────────────────────────────── */
 .cal-grid { border-collapse: collapse; width: 100%; }
-.cal-grid thead tr { background: var(--color-bg); }
-.cal-grid thead th { border-bottom: 1px solid var(--color-border); border-right: 1px solid var(--color-border); padding: 0.5rem 0.25rem; color: var(--color-text-muted); font-weight: 600; }
-.cal-grid tbody tr { border-bottom: 1px solid var(--color-border); }
-.cal-grid tbody tr:last-child { border-bottom: none; }
-.cal-grid tbody td { border-right: 1px solid var(--color-border); }
+.cal-grid th, .cal-grid td { border: 1px solid #cbd5e1 !important; }
+.cal-grid thead th { background: var(--color-bg) !important; border-bottom: 2px solid #94a3b8 !important; padding: 0.5rem 0.25rem; color: var(--color-text-muted); font-weight: 600; }
 .cal-sticky-col { position: sticky; left: 0; z-index: 5; background: var(--color-surface) !important; }
-.cal-name-col { border-right: 2px solid var(--color-border-strong) !important; font-size: 0.875rem; color: var(--color-text); }
+.cal-name-col { border-right: 3px solid #ef4444 !important; font-size: 0.825rem; color: var(--color-text); font-weight: 700 !important; }
 .cal-hover-row:hover .cal-sticky-col { background: #f8faff !important; }
-.cal-hover-row:hover td:not(.is-absent):not(.is-justified) { background: #f8faff; }
+.cal-hover-row:hover td:not(.cal-absent):not(.cal-justified) { background: #f8faff !important; }
 .fw-600 { font-weight: 600; }
 .cal-grid .cell-slot { cursor: default; position: relative; vertical-align: middle; text-align: center; height: 44px; }
 .is-justified { background-color: var(--color-success-light) !important; color: var(--color-success); font-weight: 700; font-size: 0.8rem; }
@@ -352,17 +349,17 @@ body {
 /* Calendar history — per-cell status styles (distinct from SaisiePage toggle cells) */
 .cal-absent {
   background-color: #fff1f2 !important;
-  border-left: 3px solid #f43f5e !important;
-  color: #e11d48;
+  border-left: 3px solid #ef4444 !important;
+  color: #1e293b !important;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
 }
 .cal-justified {
   background-color: #f0fdf4 !important;
   border-left: 3px solid #22c55e !important;
-  color: #16a34a;
+  color: #1e293b !important;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.825rem;
 }
 .cal-hover-row:hover td.cal-absent   { background-color: #ffe4e6 !important; }
 .cal-hover-row:hover td.cal-justified { background-color: #dcfce7 !important; }
