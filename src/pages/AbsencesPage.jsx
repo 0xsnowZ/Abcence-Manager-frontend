@@ -12,6 +12,7 @@ function AbsencesPage() {
   const navigate  = useNavigate();
   const dispatch  = useDispatch();
   const { loading, error } = useSelector((state) => state.absences);
+  const absences = useSelector((state) => state.absences.items);
   const stagiaires = useSelector((state) => state.stagiaires.items);
 
   const [showForm,        setShowForm]        = useState(false);
@@ -24,7 +25,7 @@ function AbsencesPage() {
   });
 
   useEffect(() => {
-    dispatch(fetchAttendances());
+    if (absences.length === 0 && !loading) dispatch(fetchAttendances());
     if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 

@@ -8,17 +8,9 @@ export const fetchStagiaires = createAsyncThunk(
   "stagiaires/fetchAll",
   async (_, { rejectWithValue }) => {
     try {
-      let all = [];
-      let page = 1;
-      while (true) {
-        const response = await api.get("/stagiaires", { params: { per_page: 200, page } });
-        const payload = response.data.data;
-        const items = payload.data ?? payload;
-        all = all.concat(items);
-        if (!payload.next_page_url) break;
-        page++;
-      }
-      return all;
+      const response = await api.get("/stagiaires", { params: { per_page: 500 } });
+      const payload = response.data.data;
+      return payload.data ?? payload;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de chargement");
     }
@@ -122,7 +114,7 @@ const stagiaireSlice = createSlice({
     builder
       .addCase(createStagiaire.pending, (state) => { state.error = null; })
       .addCase(createStagiaire.fulfilled, (state, action) => {
-        state.items = sortStagiaires([...state.items, action.payload]);
+        state.items = sortStagiaires([...state.items, normalizeStagiaire(action.payload)]);
       })
       .addCase(createStagiaire.rejected, (state, action) => {
         state.error = action.payload;
@@ -133,7 +125,7 @@ const stagiaireSlice = createSlice({
       .addCase(updateStagiaire.pending, (state) => { state.error = null; })
       .addCase(updateStagiaire.fulfilled, (state, action) => {
         const idx = state.items.findIndex((s) => s.id === action.payload.id);
-        if (idx !== -1) state.items[idx] = action.payload;
+        if (idx !== -1) state.items[idx] = normalizeStagiaire(action.payload);
         state.items = sortStagiaires(state.items);
       })
       .addCase(updateStagiaire.rejected, (state, action) => {

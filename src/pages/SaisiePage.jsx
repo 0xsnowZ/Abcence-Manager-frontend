@@ -20,6 +20,7 @@ function SaisiePage() {
   const dispatch = useDispatch();
   const stagiaires = useSelector((state) => state.stagiaires.items);
   const allAbsences = useSelector((state) => state.absences.items);
+  const absencesLoading = useSelector((state) => state.absences.loading);
   const { user } = useSelector((state) => state.auth);
   const { items: programmes } = useSelector((state) => state.programmes);
   const { timeBlocks } = useSelector((state) => state.sessions);
@@ -28,7 +29,7 @@ function SaisiePage() {
   useEffect(() => {
     dispatch(fetchTimeBlocks());
     dispatch(fetchProgrammes());
-    dispatch(fetchAttendances());
+    if (allAbsences.length === 0 && !absencesLoading) dispatch(fetchAttendances());
     if (stagiaires.length === 0) dispatch(fetchStagiaires());
   }, [dispatch]);
 

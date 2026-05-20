@@ -30,7 +30,7 @@ api.interceptors.response.use(
       // Clear stale auth data and redirect to login
       localStorage.removeItem("sanctum_token");
       localStorage.removeItem("user");
-      window.location.href = "/#/login";
+      window.location.href = "/";
     }
     return Promise.reject(error);
   }

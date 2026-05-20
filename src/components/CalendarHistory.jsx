@@ -246,9 +246,9 @@ function CalendarHistory() {
                   {filteredStagiaires.map((stagiaire) => (
                     <tr key={stagiaire.id} className="cal-hover-row">
                       <td className="ps-4 fw-600 cal-sticky-col cal-name-col">
-                        {stagiaire.prenom
-                          ? `${stagiaire.prenom} ${stagiaire.nom}`
-                          : stagiaire.nomComplet || stagiaire.nom}
+                      {stagiaire.nomComplet ||
+                          `${stagiaire.nom} ${stagiaire.prenom}`.trim() ||
+                          stagiaire.nom}
                       </td>
                       {dateColumns.map((d, dIdx) => {
                         const dateStr = formatStoreDate(d);

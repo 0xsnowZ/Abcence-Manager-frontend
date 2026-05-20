@@ -15,5 +15,15 @@ export default defineConfig({
   },
   build: {
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          recharts: ["recharts"],
+          xlsx:     ["xlsx"],
+          lucide:   ["lucide-react"],
+          vendor:   ["react", "react-dom", "react-router-dom", "@reduxjs/toolkit", "react-redux"],
+        },
+      },
+    },
   },
 });
