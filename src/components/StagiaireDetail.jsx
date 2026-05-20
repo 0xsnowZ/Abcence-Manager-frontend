@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useMemo, useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchTimeBlocks } from "../store/sessionSlice.jsx";
 import {
   AreaChart,
   Area,
@@ -53,7 +54,25 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 function StagiaireDetail({ stagiaire, onBack }) {
+  const dispatch = useDispatch();
   const rawAbsences = useSelector((s) => s.absences.items);
+  const { timeBlocks } = useSelector((state) => state.sessions);
+
+  useEffect(() => {
+    if (!timeBlocks || timeBlocks.length === 0) {
+      dispatch(fetchTimeBlocks());
+    }
+  }, [dispatch, timeBlocks]);
+
+  const getSeanceLabel = (tbid) => {
+    if (!tbid) return "";
+    const tb = timeBlocks.find((b) => String(b.id) === String(tbid));
+    if (!tb) return "";
+    const idx = timeBlocks.findIndex((b) => String(b.id) === String(tbid));
+    const slotNum = idx !== -1 ? `S${idx + 1}` : "";
+    const timeLabel = tb.heure_debut && tb.heure_fin ? ` (${tb.heure_debut.slice(0, 5)}–${tb.heure_fin.slice(0, 5)})` : "";
+    return `${slotNum}${timeLabel}`;
+  };
 
   const stagAbsences = useMemo(
     () =>
@@ -349,12 +368,19 @@ function StagiaireDetail({ stagiaire, onBack }) {
                   {currentAbsences.map((a) => (
                     <tr key={a.id}>
                       <td className="ps-4 fw-medium">
-                        <i className="bi bi-calendar3 me-2 opacity-50"></i>
-                        {a.date
-                          ? new Date(
-                              a.date.slice(0, 10) + "T00:00:00",
-                            ).toLocaleDateString("fr-FR")
-                          : "—"}
+                        <span className="d-block">
+                          <i className="bi bi-calendar3 me-2 opacity-50"></i>
+                          {a.date
+                            ? new Date(
+                                a.date.slice(0, 10) + "T00:00:00",
+                              ).toLocaleDateString("fr-FR")
+                            : "—"}
+                        </span>
+                        {a.time_block_id && (
+                          <span className="body-xs text-muted d-block ms-4">
+                            {getSeanceLabel(a.time_block_id)}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span className="badge bg-light text-dark border rounded-pill px-3">

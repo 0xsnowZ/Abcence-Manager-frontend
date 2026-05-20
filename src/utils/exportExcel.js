@@ -20,11 +20,22 @@ function getClasse(stagiaires, idstag) {
   return (s.programmes || [])[0]?.code_diplome || s.filiere || s.programme_code || "—";
 }
 
-function buildRow(absence, stagiaires) {
+function buildRow(absence, stagiaires, timeBlocks = []) {
   const s = getStagiaire(stagiaires, absence.idstag);
   const name =
     absence.stagiaireNom ||
     (s ? `${s.prenom ?? ""} ${s.nom ?? ""}`.trim() : "Inconnu");
+
+  let seanceLabel = "—";
+  if (absence.time_block_id && timeBlocks && timeBlocks.length > 0) {
+    const tb = timeBlocks.find((b) => String(b.id) === String(absence.time_block_id));
+    if (tb) {
+      const idx = timeBlocks.findIndex((b) => String(b.id) === String(absence.time_block_id));
+      const slotNum = idx !== -1 ? `S${idx + 1}` : "";
+      const timeLabel = tb.heure_debut && tb.heure_fin ? ` (${tb.heure_debut.slice(0, 5)}–${tb.heure_fin.slice(0, 5)})` : "";
+      seanceLabel = `${slotNum}${timeLabel}`;
+    }
+  }
 
   return {
     ID:            absence.id,
@@ -34,6 +45,7 @@ function buildRow(absence, stagiaires) {
     Date:          absence.date
                      ? new Date(absence.date).toLocaleDateString("fr-FR")
                      : "—",
+    "Séance":      seanceLabel,
     "Heures":      absence.heures ?? 2.5,
     Statut:        STATUS_LABELS[absence.status] ?? "Non justifiée",
     Justification: absence.justification || "",
@@ -50,6 +62,7 @@ function applyColWidths(ws) {
     { wch: 14 }, // Matricule
     { wch: 14 }, // Classe
     { wch: 12 }, // Date
+    { wch: 18 }, // Séance
     { wch: 8  }, // Heures
     { wch: 18 }, // Statut
     { wch: 40 }, // Justification
@@ -59,8 +72,8 @@ function applyColWidths(ws) {
 /**
  * Build a worksheet from an array of absence objects.
  */
-function makeSheet(absences, stagiaires) {
-  const rows = absences.map((a) => buildRow(a, stagiaires));
+function makeSheet(absences, stagiaires, timeBlocks) {
+  const rows = absences.map((a) => buildRow(a, stagiaires, timeBlocks));
   const ws   = XLSX.utils.json_to_sheet(rows);
   applyColWidths(ws);
   return ws;
@@ -73,15 +86,16 @@ function makeSheet(absences, stagiaires) {
  * @param {Array}  filteredAbsences  Normalized absence objects already filtered by the UI
  * @param {Array}  stagiaires        Full stagiaire list from Redux store
  * @param {string} filiereFilter     Currently active class filter ("" = all classes)
+ * @param {Array}  timeBlocks        Full list of time blocks from Redux store
  */
-export function exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilter) {
+export function exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilter, timeBlocks = []) {
   const workbook = XLSX.utils.book_new();
   const dateStr  = new Date().toISOString().slice(0, 10);
 
   if (filiereFilter) {
     // ── Single class → one sheet ─────────────────────────────────────────────
     const sheetName = filiereFilter.slice(0, 31); // Excel max 31 chars
-    const ws        = makeSheet(filteredAbsences, stagiaires);
+    const ws        = makeSheet(filteredAbsences, stagiaires, timeBlocks);
     XLSX.utils.book_append_sheet(workbook, ws, sheetName);
     XLSX.writeFile(workbook, `absences_${filiereFilter}_${dateStr}.xlsx`);
   } else {
@@ -101,7 +115,7 @@ export function exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilte
       XLSX.utils.book_append_sheet(workbook, ws, "Aucune donnée");
     } else {
       classes.forEach((classe) => {
-        const ws = makeSheet(byClasse[classe], stagiaires);
+        const ws = makeSheet(byClasse[classe], stagiaires, timeBlocks);
         XLSX.utils.book_append_sheet(workbook, ws, classe.slice(0, 31));
       });
     }

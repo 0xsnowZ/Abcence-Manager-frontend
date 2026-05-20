@@ -6,6 +6,7 @@ import ConfirmModal from "./ConfirmModal.jsx";
 import AbsenceDetailModal from "./AbsenceDetailModal.jsx";
 import StagiaireDetail from "./StagiaireDetail.jsx";
 import { exportAbsencesToExcel } from "../utils/exportExcel.js";
+import { fetchTimeBlocks } from "../store/sessionSlice.jsx";
 
 const SHIMMER_CSS = `
 @keyframes skeleton-shimmer {
@@ -37,6 +38,23 @@ function AbsenceList({
   const [confirm, setConfirm] = useState({ open: false, id: null });
   const [viewingStagiaire, setViewingStagiaire] = useState(null);
   const [detailAbsence, setDetailAbsence] = useState(null);
+  const { timeBlocks } = useSelector((state) => state.sessions);
+
+  useEffect(() => {
+    if (!timeBlocks || timeBlocks.length === 0) {
+      dispatch(fetchTimeBlocks());
+    }
+  }, [dispatch, timeBlocks]);
+
+  const getSeanceLabel = (tbid) => {
+    if (!tbid) return "";
+    const tb = timeBlocks.find((b) => String(b.id) === String(tbid));
+    if (!tb) return "";
+    const idx = timeBlocks.findIndex((b) => String(b.id) === String(tbid));
+    const slotNum = idx !== -1 ? `S${idx + 1}` : "";
+    const timeLabel = tb.heure_debut && tb.heure_fin ? ` (${tb.heure_debut.slice(0, 5)}–${tb.heure_fin.slice(0, 5)})` : "";
+    return `${slotNum}${timeLabel}`;
+  };
 
   // Normalize: backend attendance has stagiaire_id; frontend used idstag
   const absences = rawAbsences.map((a) => ({
@@ -161,7 +179,7 @@ function AbsenceList({
             </span>
             <button
               className="btn btn-success btn-sm fw-bold d-flex align-items-center gap-1 px-3"
-              onClick={() => exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilter || "")}
+              onClick={() => exportAbsencesToExcel(filteredAbsences, stagiaires, filiereFilter || "", timeBlocks)}
               disabled={filteredAbsences.length === 0}
               title={filteredAbsences.length === 0 ? "Aucune donnée à exporter" : "Exporter en Excel"}
               style={{ fontSize: "0.8rem", whiteSpace: "nowrap" }}
@@ -283,10 +301,15 @@ function AbsenceList({
                         </span>
                       </td>
                       <td>
-                        <span className="body-sm fw-medium">
+                        <span className="body-sm fw-medium d-block">
                           <i className="bi bi-calendar3 me-2 text-dark-navy opacity-50"></i>
                           {formatDate(absence.date)}
                         </span>
+                        {absence.time_block_id && (
+                          <span className="body-xs text-muted d-block ms-4">
+                            {getSeanceLabel(absence.time_block_id)}
+                          </span>
+                        )}
                       </td>
                       <td className="text-center d-none d-md-table-cell">
                         <span className="badge bg-light text-dark fw-bold border rounded-pill px-3 py-1">

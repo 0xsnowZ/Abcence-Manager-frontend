@@ -2,6 +2,7 @@ import { useEffect, useMemo, Fragment } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
+import { fetchTimeBlocks } from "../store/sessionSlice.jsx";
 import { Users, AlertTriangle, Clock, BarChart3, Award, TrendingUp, Calendar, ShieldAlert } from "lucide-react";
 import { SkeletonStatCards, SkeletonTableRows } from "../components/Skeleton.jsx";
 import {
@@ -92,11 +93,13 @@ function Statistics({
   const dispatch = useDispatch();
   const { items: absences, loading, error } = useSelector((state) => state.absences);
   const stagiaires = useSelector((state) => state.stagiaires.items);
+  const { timeBlocks } = useSelector((state) => state.sessions);
 
   useEffect(() => {
     if (absences.length === 0 && !loading) dispatch(fetchAttendances());
     if (stagiaires.length === 0) dispatch(fetchStagiaires());
-  }, [dispatch, absences.length, loading, stagiaires.length]);
+    if (timeBlocks.length === 0) dispatch(fetchTimeBlocks());
+  }, [dispatch, absences.length, loading, stagiaires.length, timeBlocks.length]);
 
   const normalizedAbsences = useMemo(() =>
     absences.map((a) => ({
@@ -302,18 +305,25 @@ function Statistics({
           statusBadgeClass = "bg-soft-info text-info";
         }
 
+        const tb = timeBlocks.find((b) => String(b.id) === String(a.time_block_id));
+        const idx = timeBlocks.findIndex((b) => String(b.id) === String(a.time_block_id));
+        const sessionSlot = idx !== -1 ? `S${idx + 1}` : (a.session?.time_block?.code || "N/A");
+        const sessionTime = tb
+          ? `${tb.heure_debut?.slice(0, 5)}–${tb.heure_fin?.slice(0, 5)}`
+          : (a.session?.time_block
+            ? `${a.session.time_block.heure_debut?.slice(0, 5)}–${a.session.time_block.heure_fin?.slice(0, 5)}`
+            : "N/A");
+
         return {
           ...a,
           badgeClass,
           statusLabel,
           statusBadgeClass,
-          sessionSlot: a.session?.time_block?.code || "N/A",
-          sessionTime: a.session?.time_block 
-            ? `${a.session.time_block.heure_debut?.slice(0, 5)}–${a.session.time_block.heure_fin?.slice(0, 5)}`
-            : "N/A",
+          sessionSlot,
+          sessionTime,
         };
       });
-  }, [selectedStagiaire, filteredAbsences]);
+  }, [selectedStagiaire, filteredAbsences, timeBlocks]);
 
   // ─── Class analytics details ──────────────────────────────────────────────
   const classStudentsRoster = useMemo(() => {
