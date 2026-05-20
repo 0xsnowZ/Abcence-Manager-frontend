@@ -10,7 +10,9 @@ function Navigation({ onCollapse }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem("sidebar-collapsed") === "true";
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = () => {
@@ -30,6 +32,7 @@ function Navigation({ onCollapse }) {
   const toggleCollapse = () => {
     const next = !collapsed;
     setCollapsed(next);
+    localStorage.setItem("sidebar-collapsed", String(next));
     onCollapse?.(next);
   };
 

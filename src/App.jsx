@@ -15,7 +15,9 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 // Main App Layout for Protected Routes
 function AppLayout() {
   const { user } = useSelector(state => state.auth);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem("sidebar-collapsed") === "true";
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
