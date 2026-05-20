@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateAttendance } from "../store/absenceSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
+import { fetchTimeBlocks } from "../store/sessionSlice.jsx";
 
 function AbsenceDetailModal({ absence, onClose }) {
     const dispatch = useDispatch();
     const showToast = useToast();
     const user = useSelector((state) => state.auth.user);
+    const { timeBlocks } = useSelector((state) => state.sessions);
     const [editing, setEditing] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState(absence?.status || "non_justifie");
     const [justification, setJustification] = useState(absence?.justification || "");
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (!timeBlocks || timeBlocks.length === 0) {
+            dispatch(fetchTimeBlocks());
+        }
+    }, [dispatch, timeBlocks]);
 
     const isAdmin = user?.role === "admin";
 
@@ -23,6 +31,23 @@ function AbsenceDetailModal({ absence, onClose }) {
 
     const currentStatus = absence?.status || "non_justifie";
     const statusConfig = statusColors[currentStatus] || statusColors.non_justifie;
+
+    const getSeanceLabel = (tbid) => {
+        if (!tbid) return "";
+        const tb = timeBlocks.find((b) => String(b.id) === String(tbid));
+        if (!tb) return "";
+        const idx = timeBlocks.findIndex((b) => String(b.id) === String(tbid));
+        const slotNum = idx !== -1 ? `S${idx + 1}` : "";
+        const timeLabel = tb.heure_debut && tb.heure_fin ? ` (${tb.heure_debut.slice(0, 5)}–${tb.heure_fin.slice(0, 5)})` : "";
+        return `${slotNum}${timeLabel}`;
+    };
+
+    const formatSessionDate = (dateStr) => {
+        if (!dateStr) return "—";
+        const cleanDate = dateStr.slice(0, 10);
+        const [y, m, d] = cleanDate.split("-");
+        return `${d}/${m}/${y}`;
+    };
 
     const formatDate = (dateStr) => {
         if (!dateStr) return "—";
@@ -74,7 +99,13 @@ function AbsenceDetailModal({ absence, onClose }) {
 
                     <div className="mb-4">
                         <label className="form-label fw-semibold">Date</label>
-                        <p className="mb-0">{formatDate(absence.date)}</p>
+                        <p className="mb-0">{formatSessionDate(absence.date)}</p>
+                        {absence.time_block_id && (
+                            <span className="text-muted small mt-1 d-block">
+                                <i className="bi bi-clock me-1"></i>
+                                Séance: <strong>{getSeanceLabel(absence.time_block_id)}</strong>
+                            </span>
+                        )}
                     </div>
 
                     <div className="mb-4">
