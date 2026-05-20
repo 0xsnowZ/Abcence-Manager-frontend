@@ -1,12 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, Fragment } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { fetchAttendances } from "../store/absenceSlice.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
-import { Users, AlertTriangle, Clock, BarChart3 } from "lucide-react";
+import { Users, AlertTriangle, Clock, BarChart3, Award, TrendingUp, Calendar, ShieldAlert } from "lucide-react";
 import { SkeletonStatCards, SkeletonTableRows } from "../components/Skeleton.jsx";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  RadialBarChart, RadialBar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 
@@ -32,7 +31,7 @@ const MONTH_NAMES = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oc
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="card-premium p-3" style={{ fontSize: "0.8rem", minWidth: 120 }}>
+    <div className="card-premium p-3 bg-white" style={{ fontSize: "0.8rem", minWidth: 120 }}>
       {label && <p className="fw-semibold mb-1 text-dark">{label}</p>}
       {payload.map((e, i) => (
         <p key={i} className="mb-0" style={{ color: e.color }}>
@@ -43,8 +42,53 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
+// ── SVG Progress Ring ────────────────────────────────────────────────────────
+const CircularProgressRing = ({ percentage, color = "#10b981", size = 110, strokeWidth = 8 }) => {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (Math.min(100, Math.max(0, percentage)) / 100) * circumference;
+
+  return (
+    <svg width={size} height={size} className="circular-gauge">
+      <circle
+        stroke="rgba(0, 0, 0, 0.05)"
+        fill="transparent"
+        strokeWidth={strokeWidth}
+        r={radius}
+        cx={size / 2}
+        cy={size / 2}
+      />
+      <circle
+        stroke={color}
+        fill="transparent"
+        strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={strokeDashoffset}
+        strokeLinecap="round"
+        r={radius}
+        cx={size / 2}
+        cy={size / 2}
+        style={{
+          transform: "rotate(-90deg)",
+          transformOrigin: "50% 50%",
+          transition: "stroke-dashoffset 0.6s ease",
+        }}
+      />
+    </svg>
+  );
+};
+
 // ── component ────────────────────────────────────────────────────────────────
-function Statistics({ selectedMonth }) {
+function Statistics({
+  activeChoiceView,
+  selectedFiliere,
+  selectedStagiaire,
+  selectedStatus,
+  datePreset,
+  selectedMonth,
+  startDate,
+  endDate,
+}) {
   const dispatch = useDispatch();
   const { items: absences, loading, error } = useSelector((state) => state.absences);
   const stagiaires = useSelector((state) => state.stagiaires.items);
@@ -64,12 +108,51 @@ function Statistics({ selectedMonth }) {
     [absences]
   );
 
+  // ─── Filter logic ─────────────────────────────────────────────────────────
   const filteredAbsences = useMemo(() => {
-    if (!selectedMonth) return normalizedAbsences;
-    return normalizedAbsences.filter((a) => a.date.startsWith(selectedMonth));
-  }, [normalizedAbsences, selectedMonth]);
+    let list = normalizedAbsences;
 
-  // ── computed ──────────────────────────────────────────────────────────────
+    // 1. Date filter preset
+    if (datePreset === "month" && selectedMonth) {
+      list = list.filter((a) => a.date.startsWith(selectedMonth));
+    } else if (datePreset === "range") {
+      if (startDate) {
+        list = list.filter((a) => a.date >= startDate);
+      }
+      if (endDate) {
+        list = list.filter((a) => a.date <= endDate);
+      }
+    }
+
+    // 2. Class/Filiere filter
+    if (selectedFiliere) {
+      list = list.filter((a) => {
+        const stag = stagiaires.find((s) => String(s.id) === String(getStagId(a)));
+        if (!stag) return false;
+        return getStagiaireClasse(stag) === selectedFiliere;
+      });
+    }
+
+    // 3. Trainee/Stagiaire filter
+    if (selectedStagiaire) {
+      list = list.filter((a) => String(getStagId(a)) === String(selectedStagiaire));
+    }
+
+    // 4. Absence Status filter
+    if (selectedStatus && selectedStatus !== "all") {
+      list = list.filter((a) => {
+        if (selectedStatus === "justifie") return a.justifie === true && a.status !== "retard" && a.status !== "absence_excusee";
+        if (selectedStatus === "unjustified") return a.justifie === false && a.status !== "retard" && a.status !== "absence_excusee";
+        if (selectedStatus === "retard") return a.status === "retard";
+        if (selectedStatus === "excusee") return a.status === "absence_excusee";
+        return true;
+      });
+    }
+
+    return list;
+  }, [normalizedAbsences, datePreset, selectedMonth, startDate, endDate, selectedFiliere, selectedStagiaire, selectedStatus, stagiaires]);
+
+  // ─── Shared computed metrics ─────────────────────────────────────────────
   const totalAbsences     = filteredAbsences.length;
   const totalHeures       = useMemo(() => filteredAbsences.reduce((s, a) => s + getHours(a), 0), [filteredAbsences]);
   const justifiedCount    = useMemo(() => filteredAbsences.filter(isJustified).length, [filteredAbsences]);
@@ -101,12 +184,14 @@ function Statistics({ selectedMonth }) {
     { name: "Non Justifiées", value: unjustifiedCount },
   ], [justifiedCount, unjustifiedCount]);
 
-  // Trend chart: daily when a month is selected, monthly otherwise
+  // Trend chart
   const trendData = useMemo(() => {
     const acc = {};
-    if (selectedMonth) {
-      filteredAbsences.forEach((a) => {
-        if (!a.date) return;
+    const scopeAbsences = selectedStagiaire ? filteredAbsences : (selectedFiliere ? filteredAbsences : normalizedAbsences);
+    
+    if (datePreset === "month" && selectedMonth) {
+      scopeAbsences.forEach((a) => {
+        if (!a.date || !a.date.startsWith(selectedMonth)) return;
         const [, , dd] = a.date.split("-");
         const key = a.date;
         const label = `${dd}/${selectedMonth.split("-")[1]}`;
@@ -115,7 +200,7 @@ function Statistics({ selectedMonth }) {
         else acc[key].unjustified++;
       });
     } else {
-      normalizedAbsences.forEach((a) => {
+      scopeAbsences.forEach((a) => {
         if (!a.date) return;
         const parts = a.date.split("-");
         if (parts.length < 2) return;
@@ -128,12 +213,13 @@ function Statistics({ selectedMonth }) {
       });
     }
     return Object.values(acc).sort((a, b) => a.sortKey.localeCompare(b.sortKey));
-  }, [normalizedAbsences, filteredAbsences, selectedMonth]);
+  }, [normalizedAbsences, filteredAbsences, datePreset, selectedMonth, selectedFiliere, selectedStagiaire]);
 
+  // Top trainees with absences
   const topAbsents = useMemo(() =>
     stagiaires
       .map((stag) => {
-        const stagAbs = filteredAbsences.filter((a) => getStagId(a) === stag.id);
+        const stagAbs = filteredAbsences.filter((a) => String(getStagId(a)) === String(stag.id));
         return {
           ...stag,
           totalAbsences: stagAbs.length,
@@ -163,13 +249,103 @@ function Statistics({ selectedMonth }) {
     [filteredAbsences, stagiaires]
   );
 
-  const radialData = [{ name: "Justifiées", value: justifiedPct, fill: "#10b981" }];
+  // ─── Individual Trainee Computations ──────────────────────────────────────
+  const selectedTraineeObj = useMemo(() => {
+    if (!selectedStagiaire) return null;
+    return stagiaires.find((s) => String(s.id) === String(selectedStagiaire));
+  }, [selectedStagiaire, stagiaires]);
 
-  // ── KPI cards config ──────────────────────────────────────────────────────
+  const individualStats = useMemo(() => {
+    if (!selectedStagiaire) return null;
+    const studentAbs = filteredAbsences.filter((a) => String(getStagId(a)) === String(selectedStagiaire));
+    const hoursCount = studentAbs.reduce((sum, a) => sum + getHours(a), 0);
+    const justCount  = studentAbs.filter(isJustified).length;
+    const unjCount   = studentAbs.length - justCount;
+    const retardCount = studentAbs.filter((a) => a.status === "retard").length;
+    const excuseCount = studentAbs.filter((a) => a.status === "absence_excusee").length;
+
+    // Assiduity rate formula: assuming standard period is 96 class hours
+    const presentRate = Math.max(0, 100 - Math.round((hoursCount / 96) * 100));
+
+    return {
+      presentRate,
+      hoursCount,
+      justCount,
+      unjCount,
+      retardCount,
+      excuseCount,
+      totalCount: studentAbs.length,
+    };
+  }, [selectedStagiaire, filteredAbsences]);
+
+  const individualTimeline = useMemo(() => {
+    if (!selectedStagiaire) return [];
+    return [...filteredAbsences]
+      .filter((a) => String(getStagId(a)) === String(selectedStagiaire))
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .map((a) => {
+        let badgeClass = "unjustified";
+        let statusLabel = "Non justifiée";
+        let statusBadgeClass = "bg-soft-danger text-danger";
+
+        if (a.status === "justifie" || a.justifie) {
+          badgeClass = "justifie";
+          statusLabel = "Justifiée";
+          statusBadgeClass = "bg-soft-success text-success";
+        } else if (a.status === "retard") {
+          badgeClass = "retard";
+          statusLabel = "Retard";
+          statusBadgeClass = "bg-soft-warning text-warning";
+        } else if (a.status === "absence_excusee") {
+          badgeClass = "excusee";
+          statusLabel = "Excusée";
+          statusBadgeClass = "bg-soft-info text-info";
+        }
+
+        return {
+          ...a,
+          badgeClass,
+          statusLabel,
+          statusBadgeClass,
+          sessionSlot: a.session?.time_block?.code || "N/A",
+          sessionTime: a.session?.time_block 
+            ? `${a.session.time_block.heure_debut?.slice(0, 5)}–${a.session.time_block.heure_fin?.slice(0, 5)}`
+            : "N/A",
+        };
+      });
+  }, [selectedStagiaire, filteredAbsences]);
+
+  // ─── Class analytics details ──────────────────────────────────────────────
+  const classStudentsRoster = useMemo(() => {
+    if (!selectedFiliere) return [];
+    const classStags = stagiaires.filter((s) => getStagiaireClasse(s) === selectedFiliere);
+    return classStags
+      .map((stag) => {
+        const stagAbs = filteredAbsences.filter((a) => String(getStagId(a)) === String(stag.id));
+        const hours = stagAbs.reduce((sum, a) => sum + getHours(a), 0);
+        return {
+          ...stag,
+          absences: stagAbs.length,
+          heures: hours,
+          justified: stagAbs.filter(isJustified).length,
+          unjustified: stagAbs.length - stagAbs.filter(isJustified).length,
+          attendanceRate: Math.max(0, 100 - Math.round((hours / 96) * 100)),
+        };
+      })
+      .sort((a, b) => b.heures - a.heures);
+  }, [selectedFiliere, stagiaires, filteredAbsences]);
+
+  const classInterventions = useMemo(() => {
+    return classStudentsRoster.filter((s) => s.heures >= 10);
+  }, [classStudentsRoster]);
+
+  // ─── KPI Cards config ──────────────────────────────────────────────────────
   const kpiCards = [
     {
-      label:    "Total Stagiaires",
-      value:    stagiaires.length,
+      label:    selectedFiliere ? `Stagiaires de ${selectedFiliere}` : "Total Stagiaires",
+      value:    selectedFiliere 
+                  ? stagiaires.filter((s) => getStagiaireClasse(s) === selectedFiliere).length 
+                  : stagiaires.length,
       icon:     Users,
       color:    "#6366f1",
       bg:       "rgba(99,102,241,0.1)",
@@ -193,23 +369,13 @@ function Statistics({ selectedMonth }) {
     },
   ];
 
-  // ── loading / error states ────────────────────────────────────────────────
+  // ─── loading / error states ────────────────────────────────────────────────
   if (loading && absences.length === 0) {
     return (
       <div>
         <SkeletonStatCards count={3} />
-        <div
-          className="p-0 mt-2"
-          style={{
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-          }}
-        >
-          <table className="table align-middle mb-0">
-            <SkeletonTableRows rows={6} cols={5} />
-          </table>
+        <div className="p-4 mt-4 bg-white border rounded-3">
+          <SkeletonTableRows rows={6} cols={5} />
         </div>
       </div>
     );
@@ -241,51 +407,21 @@ function Statistics({ selectedMonth }) {
     "linear-gradient(135deg,#f59e0b,#fbbf24)",
   ];
 
-  return (
-    <div>
-      {/* ── KPI Cards ── */}
-      <div className="row g-4 mb-4">
-        {kpiCards.map((c, i) => {
-          const Icon = c.icon;
-          return (
-            <div key={i} className="col-12 col-sm-6 col-lg-4">
-              <div style={{ ...cardStyle, transition: "box-shadow 0.2s, transform 0.2s" }}
-                className="p-4 hover-lift">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <div className="d-flex align-items-center justify-content-center rounded-3"
-                    style={{ width: 44, height: 44, background: c.bg }}>
-                    <Icon size={20} color={c.color} />
-                  </div>
-                  <span className="badge rounded-pill d-flex align-items-center gap-1"
-                    style={{
-                      background: c.trendUp ? "rgba(16,185,129,0.1)" : "rgba(244,63,94,0.1)",
-                      color:      c.trendUp ? "#059669" : "#e11d48",
-                      fontSize:   "0.75rem",
-                      fontWeight: 600,
-                    }}>
-                    <i className={`bi bi-arrow-${c.trendUp ? "up" : "down"}-right`}></i>
-                  </span>
-                </div>
-                <p className="mb-1" style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1, color: "var(--color-text)" }}>
-                  {c.value}
-                </p>
-                <p className="body-sm mb-0">{c.label}</p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+  // ─── VIEW RENDERERS ───────────────────────────────────────────────────────
 
-      {/* ── Row 2: Area Trend + Pie ── */}
+  // Choice 1: Global Overview Renders
+  const renderGlobalOverview = () => (
+    <>
+      {/* Row 2: Area Trend + Pie */}
       <div className="row g-4 mb-4">
         {/* Area Chart */}
         <div className="col-lg-8">
-          <div style={cardStyle} className="overflow-hidden h-100">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
             <div className="d-flex align-items-center justify-content-between px-4 py-3" style={headerStyle}>
               <div className="d-flex align-items-center gap-2">
                 <div className="d-flex align-items-center justify-content-center rounded-2"
                   style={{ width: 32, height: 32, background: "rgba(99,102,241,0.1)" }}>
-                  <i className="bi bi-activity" style={{ color: "#6366f1", fontSize: "0.9rem" }}></i>
+                  <TrendingUp size={16} color="#6366f1" />
                 </div>
                 <span className="section-title">Tendance des Absences</span>
               </div>
@@ -333,7 +469,7 @@ function Statistics({ selectedMonth }) {
 
         {/* Pie Chart */}
         <div className="col-lg-4">
-          <div style={cardStyle} className="overflow-hidden h-100">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
             <div className="d-flex align-items-center gap-2 px-4 py-3" style={headerStyle}>
               <div className="d-flex align-items-center justify-content-center rounded-2"
                 style={{ width: 32, height: 32, background: "rgba(16,185,129,0.1)" }}>
@@ -343,15 +479,21 @@ function Statistics({ selectedMonth }) {
             </div>
             <div className="p-3">
               <div style={{ height: 200 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
-                      paddingAngle={4} dataKey="value" strokeWidth={0}>
-                      {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
+                {totalAbsences === 0 ? (
+                  <div className="d-flex align-items-center justify-content-center h-100 text-muted body-sm">
+                    Aucune absence
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={80}
+                        paddingAngle={4} dataKey="value" strokeWidth={0}>
+                        {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                      </Pie>
+                      <Tooltip content={<CustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
               </div>
               <div className="mt-2 d-flex flex-column gap-2">
                 <div className="d-flex align-items-center justify-content-between p-2 rounded-3"
@@ -360,7 +502,7 @@ function Statistics({ selectedMonth }) {
                     <span className="rounded-circle" style={{ width: 12, height: 12, background: "#10b981", display: "inline-block" }}></span>
                     <span className="body-sm fw-medium">Justifiées</span>
                   </div>
-                  <span className="fw-bold" style={{ color: "#10b981", fontSize: "0.85rem" }}>
+                  <span className="fw-bold animate-fade-in" style={{ color: "#10b981", fontSize: "0.85rem" }}>
                     {justifiedCount} <span className="text-muted fw-normal">({justifiedPct}%)</span>
                   </span>
                 </div>
@@ -370,7 +512,7 @@ function Statistics({ selectedMonth }) {
                     <span className="rounded-circle" style={{ width: 12, height: 12, background: "#f43f5e", display: "inline-block" }}></span>
                     <span className="body-sm fw-medium">Non Justifiées</span>
                   </div>
-                  <span className="fw-bold" style={{ color: "#f43f5e", fontSize: "0.85rem" }}>
+                  <span className="fw-bold animate-fade-in" style={{ color: "#f43f5e", fontSize: "0.85rem" }}>
                     {unjustifiedCount} <span className="text-muted fw-normal">({100 - justifiedPct}%)</span>
                   </span>
                 </div>
@@ -380,11 +522,11 @@ function Statistics({ selectedMonth }) {
         </div>
       </div>
 
-      {/* ── Row 3: Bar Chart + Top Absents ── */}
+      {/* Row 3: Bar Chart + Top Absents */}
       <div className="row g-4 mb-4">
         {/* Bar Chart */}
         <div className="col-lg-7">
-          <div style={cardStyle} className="overflow-hidden h-100">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
             <div className="d-flex align-items-center justify-content-between px-4 py-3" style={headerStyle}>
               <div className="d-flex align-items-center gap-2">
                 <div className="d-flex align-items-center justify-content-center rounded-2"
@@ -421,13 +563,13 @@ function Statistics({ selectedMonth }) {
 
         {/* Top 5 Absents */}
         <div className="col-lg-5">
-          <div style={cardStyle} className="overflow-hidden h-100">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
             <div className="d-flex align-items-center gap-2 px-4 py-3" style={headerStyle}>
               <div className="d-flex align-items-center justify-content-center rounded-2"
                 style={{ width: 32, height: 32, background: "rgba(244,63,94,0.1)" }}>
-                <i className="bi bi-trophy-fill" style={{ color: "#f43f5e", fontSize: "0.9rem" }}></i>
+                <Award size={16} color="#f43f5e" />
               </div>
-              <span className="section-title">Top Absences</span>
+              <span className="section-title">Palmarès des Absences (Top 5)</span>
             </div>
             <div>
               {topAbsents.length === 0 ? (
@@ -443,9 +585,9 @@ function Statistics({ selectedMonth }) {
                     <div key={stag.id}
                       className="d-flex align-items-center gap-3 px-4 py-3"
                       style={{ borderBottom: index < topAbsents.length - 1 ? "1px solid var(--color-border)" : "none" }}>
-                      <span className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 fw-bold text-white"
+                      <span className="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0 fw-bold text-white shadow-sm"
                         style={{
-                          width: 32, height: 32, fontSize: "0.75rem",
+                          width: 30, height: 30, fontSize: "0.75rem",
                           background: index < 3 ? rankGradients[index] : "var(--color-bg)",
                           color: index < 3 ? "#fff" : "var(--color-text-muted)",
                         }}>
@@ -453,7 +595,7 @@ function Statistics({ selectedMonth }) {
                       </span>
                       <div className="flex-grow-1 min-w-0">
                         <div className="d-flex justify-content-between mb-1">
-                          <span className="fw-semibold text-truncate" style={{ fontSize: "0.875rem" }}>{getStagName(stag)}</span>
+                          <span className="fw-bold text-truncate" style={{ fontSize: "0.85rem", color: "var(--color-text)" }}>{getStagName(stag)}</span>
                           <span className="body-sm text-muted ms-2 flex-shrink-0">{getStagiaireClasse(stag)}</span>
                         </div>
                         <div className="rounded-pill overflow-hidden mb-1" style={{ height: 6, background: "var(--color-bg)" }}>
@@ -464,14 +606,14 @@ function Statistics({ selectedMonth }) {
                                 ? "linear-gradient(90deg,#e11d48,#f43f5e)"
                                 : index === 1
                                   ? "linear-gradient(90deg,#f59e0b,#fbbf24)"
-                                  : "linear-gradient(90deg,#94a3b8,#cbd5e1)",
+                                  : "linear-gradient(90deg,#6366f1,#8b5cf6)",
                               transition: "width 0.7s",
                             }}
                           />
                         </div>
                         <div className="d-flex gap-3">
-                          <span className="body-sm">{stag.totalAbsences} absences</span>
-                          <span className="fw-semibold" style={{ color: "#f43f5e", fontSize: "0.78rem" }}>{stag.totalHeures}h</span>
+                          <span className="body-sm text-secondary">{stag.totalAbsences} absences</span>
+                          <span className="fw-semibold text-danger" style={{ fontSize: "0.78rem" }}>{stag.totalHeures}h</span>
                           <span style={{ color: "#10b981", fontSize: "0.78rem" }}>{stag.justified} just.</span>
                         </div>
                       </div>
@@ -484,17 +626,16 @@ function Statistics({ selectedMonth }) {
         </div>
       </div>
 
-      {/* ── Row 4: Recent Absences + Quick Stats ── */}
-      <div className="row g-4">
-        {/* Recent Absences Table */}
-        <div className="col-lg-8">
-          <div style={cardStyle} className="overflow-hidden">
+      {/* Row 4: Recent Absences */}
+      <div className="row g-4 mb-2">
+        <div className="col-12">
+          <div style={cardStyle} className="overflow-hidden bg-white">
             <div className="d-flex align-items-center gap-2 px-4 py-3" style={headerStyle}>
               <div className="d-flex align-items-center justify-content-center rounded-2"
                 style={{ width: 32, height: 32, background: "rgba(245,158,11,0.1)" }}>
-                <i className="bi bi-clock-history" style={{ color: "#f59e0b", fontSize: "0.9rem" }}></i>
+                <Clock size={16} color="#f59e0b" />
               </div>
-              <span className="section-title">Absences Récentes</span>
+              <span className="section-title">Flux d'Absences Récentes</span>
             </div>
             <div className="table-responsive">
               <table className="table align-middle mb-0 custom-table">
@@ -512,7 +653,7 @@ function Statistics({ selectedMonth }) {
                     <tr>
                       <td colSpan={5} className="text-center py-5 body-sm text-muted">
                         <i className="bi bi-inbox d-block mb-2 opacity-25" style={{ fontSize: "1.5rem" }}></i>
-                        Aucune absence récente
+                        Aucune absence récente enregistrée
                       </td>
                     </tr>
                   ) : recentAbsences.map((abs) => {
@@ -530,31 +671,32 @@ function Statistics({ selectedMonth }) {
                               }}>
                               {abs.stagNom.charAt(0).toUpperCase()}
                             </div>
-                            <span className="fw-medium" style={{ fontSize: "0.875rem" }}>{abs.stagNom}</span>
+                            <span className="fw-semibold text-dark-navy" style={{ fontSize: "0.85rem" }}>{abs.stagNom}</span>
                           </div>
                         </td>
                         <td className="d-none d-md-table-cell">
                           <span className="badge rounded-2 px-2 py-1"
-                            style={{ background: "rgba(99,102,241,0.1)", color: "#4f46e5", fontSize: "0.75rem" }}>
+                            style={{ background: "rgba(99,102,241,0.06)", color: "#4f46e5", fontSize: "0.725rem", border: "1px solid rgba(99,102,241,0.15)" }}>
                             {abs.stagFiliere}
                           </span>
                         </td>
-                        <td className="text-center body-sm">
+                        <td className="text-center body-sm fw-medium text-secondary">
                           {abs.date ? new Date(abs.date.slice(0, 10) + "T00:00:00").toLocaleDateString("fr-FR") : "-"}
                         </td>
-                        <td className="text-center fw-semibold d-none d-sm-table-cell" style={{ fontSize: "0.875rem" }}>
+                        <td className="text-center fw-semibold text-dark d-none d-sm-table-cell" style={{ fontSize: "0.825rem" }}>
                           {getHours(abs)}h
                         </td>
                         <td className="text-center pe-4">
                           <span className="badge rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1"
                             style={{
-                              background: just ? "rgba(16,185,129,0.1)" : "rgba(244,63,94,0.1)",
+                              background: just ? "rgba(16,185,129,0.08)" : "rgba(244,63,94,0.08)",
                               color:      just ? "#059669" : "#e11d48",
-                              fontSize:   "0.75rem",
-                              fontWeight: 600,
+                              fontSize:   "0.725rem",
+                              fontWeight: 700,
+                              border: just ? "1px solid rgba(16,185,129,0.15)" : "1px solid rgba(244,63,94,0.15)",
                             }}>
-                            <i className={`bi bi-${just ? "check-circle" : "x-circle"}`}></i>
-                            {just ? "Justifiée" : "Non just."}
+                            <i className={`bi bi-${just ? "check-circle-fill" : "x-circle-fill"}`}></i>
+                            {just ? "Justifiée" : "Non justifiée"}
                           </span>
                         </td>
                       </tr>
@@ -565,85 +707,290 @@ function Statistics({ selectedMonth }) {
             </div>
           </div>
         </div>
+      </div>
+    </>
+  );
 
-        {/* Quick Stats Panel */}
-        <div className="col-lg-4 d-flex flex-column gap-4">
-          {/* Radial justification rate */}
-          <div style={cardStyle} className="p-4">
-            <span className="section-title d-block mb-3">Taux de Justification</span>
-            <div className="d-flex align-items-center gap-3">
-              <div style={{ width: 100, height: 100, flexShrink: 0 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart innerRadius="70%" outerRadius="100%"
-                    data={radialData} startAngle={90} endAngle={-270}>
-                    <RadialBar background={{ fill: "#f1f5f9" }} dataKey="value" cornerRadius={10} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
+  // Choice 2: Class comparative and deep metrics
+  const renderClassAnalytics = () => (
+    <>
+      <div className="row g-4 mb-4">
+        {/* Class roster and metrics */}
+        <div className="col-lg-8">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
+            <div className="d-flex align-items-center justify-content-between px-4 py-3" style={headerStyle}>
+              <div className="d-flex align-items-center gap-2">
+                <div className="d-flex align-items-center justify-content-center rounded-2"
+                  style={{ width: 32, height: 32, background: "rgba(99,102,241,0.1)" }}>
+                  <i className="bi bi-people-fill text-primary" style={{ fontSize: "0.95rem" }}></i>
+                </div>
+                <span className="section-title">Rapport d'assiduité : {selectedFiliere || "Toutes les filières"}</span>
               </div>
-              <div>
-                <p className="mb-0 fw-bold" style={{ fontSize: "2rem", letterSpacing: "-0.03em", color: "var(--color-text)" }}>
-                  {justifiedPct}%
-                </p>
-                <p className="body-sm mb-0">des absences justifiées</p>
+              <span className="badge bg-soft-info text-info border px-3" style={{ fontSize: "0.725rem", fontWeight: 700 }}>
+                {classStudentsRoster.length} Stagiaires
+              </span>
+            </div>
+            <div className="table-responsive">
+              <table className="table align-middle mb-0 custom-table">
+                <thead className="label-caps bg-light" style={{ fontSize: "0.65rem" }}>
+                  <tr>
+                    <th className="ps-4 py-3">Nom du Stagiaire</th>
+                    <th className="py-3 text-center">Taux Présence</th>
+                    <th className="py-3 text-center">Absences</th>
+                    <th className="py-3 text-center">Heures</th>
+                    <th className="py-3 text-center pe-4">Justification</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {classStudentsRoster.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-5 text-muted body-sm">
+                        <i className="bi bi-info-circle me-2"></i>Aucun stagiaire trouvé. Sélectionnez une filière.
+                      </td>
+                    </tr>
+                  ) : (
+                    classStudentsRoster.map((s) => {
+                      const ringColor = s.attendanceRate >= 90 ? "#10b981" : (s.attendanceRate >= 75 ? "#f59e0b" : "#f43f5e");
+                      return (
+                        <tr key={s.id}>
+                          <td className="ps-4">
+                            <span className="fw-bold text-dark-navy" style={{ fontSize: "0.85rem" }}>
+                              {s.nomComplet || `${s.nom} ${s.prenom}`.trim() || s.nom}
+                            </span>
+                          </td>
+                          <td className="text-center">
+                            <div className="d-inline-flex align-items-center gap-2">
+                              <CircularProgressRing percentage={s.attendanceRate} color={ringColor} size={28} strokeWidth={3} />
+                              <span className="fw-bold text-dark" style={{ fontSize: "0.8rem" }}>{s.attendanceRate}%</span>
+                            </div>
+                          </td>
+                          <td className="text-center fw-medium text-secondary">{s.absences}</td>
+                          <td className="text-center fw-bold text-danger" style={{ fontSize: "0.825rem" }}>{s.heures}h</td>
+                          <td className="text-center pe-4">
+                            <span className="fw-semibold text-success" style={{ fontSize: "0.78rem" }}>{s.justified} just.</span>
+                            <span className="mx-1 text-muted">/</span>
+                            <span className="fw-semibold text-danger" style={{ fontSize: "0.78rem" }}>{s.unjustified} non-just.</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* Actionable alerts for this class */}
+        <div className="col-lg-4">
+          <div style={cardStyle} className="overflow-hidden h-100 bg-white">
+            <div className="d-flex align-items-center gap-2 px-4 py-3" style={headerStyle}>
+              <div className="d-flex align-items-center justify-content-center rounded-2"
+                style={{ width: 32, height: 32, background: "rgba(244,63,94,0.1)" }}>
+                <ShieldAlert size={16} color="#f43f5e" />
+              </div>
+              <span className="section-title">Interventions Nécéssaires</span>
+            </div>
+            <div className="p-3">
+              <p className="body-xs text-muted mb-3">
+                Stagiaires ayant accumulé plus de <strong>10 heures</strong> d'absences. Une relance ou avertissement est conseillé.
+              </p>
+              <div className="d-flex flex-column gap-3">
+                {classInterventions.length === 0 ? (
+                  <div className="text-center py-4 bg-light rounded-3 text-success body-sm fw-medium">
+                    <i className="bi bi-patch-check-fill me-2"></i>
+                    Aucun cas critique !
+                  </div>
+                ) : (
+                  classInterventions.map((s, idx) => (
+                    <div key={s.id} className="d-flex align-items-center gap-3 p-2 rounded-3 border bg-light">
+                      <div className="avatar-circle avatar-sm bg-soft-danger text-danger fw-bold">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-grow-1 min-w-0">
+                        <p className="fw-bold text-dark-navy mb-0 text-truncate" style={{ fontSize: "0.8rem" }}>
+                          {s.nomComplet || `${s.nom} ${s.prenom}`.trim() || s.nom}
+                        </p>
+                        <span className="body-xs text-danger fw-bold">{s.heures}h cumulées</span>
+                      </div>
+                      <span className="badge rounded-pill bg-danger px-2 py-1" style={{ fontSize: "0.6rem" }}>CRITIQUE</span>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </>
+  );
 
-          {/* Filière mini-bars */}
-          {absencesByFiliere.length > 0 && (
-            <div style={cardStyle} className="p-4">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <span className="section-title">Filières</span>
-                <BarChart3 size={16} color="var(--color-text-muted)" />
-              </div>
-              <div className="d-flex flex-column gap-3">
-                {absencesByFiliere.slice(0, 4).map((fil, i) => (
-                  <div key={i}>
-                    <div className="d-flex justify-content-between mb-1">
-                      <span className="body-sm fw-medium text-truncate" style={{ maxWidth: 140 }}>{fil.fullName}</span>
-                      <span className="fw-bold body-sm">{fil.heures}h</span>
-                    </div>
-                    <div className="rounded-pill overflow-hidden" style={{ height: 6, background: "var(--color-bg)" }}>
-                      <div className="rounded-pill"
-                        style={{
-                          height: "100%",
-                          width: `${absencesByFiliere[0]?.heures ? (fil.heures / absencesByFiliere[0].heures) * 100 : 0}%`,
-                          background: BAR_COLORS[i % BAR_COLORS.length],
-                          transition: "width 0.7s",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+  // Choice 3: Individual Stagiaire Assiduity Profile
+  const renderStagiaireProfile = () => {
+    if (!selectedTraineeObj) {
+      return (
+        <div className="text-center py-5 bg-white card-premium">
+          <i className="bi bi-search d-block mb-3 opacity-25" style={{ fontSize: "3rem" }}></i>
+          <h5 className="text-muted">Sélectionnez un stagiaire dans les filtres pour afficher son profil.</h5>
+        </div>
+      );
+    }
+
+    const { presentRate, hoursCount, justCount, unjCount, retardCount, excuseCount, totalCount } = individualStats;
+    const ringColor = presentRate >= 90 ? "#10b981" : (presentRate >= 75 ? "#f59e0b" : "#f43f5e");
+
+    return (
+      <div className="row g-4">
+        {/* Profile Card & present dial */}
+        <div className="col-lg-4">
+          <div style={cardStyle} className="p-4 bg-white mb-4 text-center">
+            <span className="avatar-circle avatar-xl bg-soft-primary text-primary fw-bold mx-auto mb-3" style={{ fontSize: "2rem" }}>
+              {getStagName(selectedTraineeObj).charAt(0).toUpperCase()}
+            </span>
+            <h4 className="fw-bold text-dark-navy mb-1">{getStagName(selectedTraineeObj)}</h4>
+            <p className="body-sm text-secondary mb-3">{getStagiaireClasse(selectedTraineeObj)}</p>
+
+            <hr className="my-3 opacity-10" />
+
+            <div className="my-4 d-inline-flex position-relative align-items-center justify-content-center">
+              <CircularProgressRing percentage={presentRate} color={ringColor} size={150} strokeWidth={10} />
+              <div className="gauge-inner-text">
+                <span className="fw-bold d-block text-dark-navy" style={{ fontSize: "2.25rem", letterSpacing: "-0.04em" }}>
+                  {presentRate}%
+                </span>
+                <span className="body-xs text-uppercase text-muted fw-bold">Présent</span>
               </div>
             </div>
-          )}
 
-          {/* Gradient summary */}
-          <div className="p-4 text-white rounded-3"
-            style={{
-              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
-              boxShadow: "0 4px 20px rgba(99,102,241,0.3)",
-            }}>
-            <div className="d-flex align-items-center gap-2 mb-3">
-              <i className="bi bi-graph-up-arrow text-white"></i>
-              <span className="fw-semibold" style={{ fontSize: "0.875rem", opacity: 0.9 }}>Résumé Rapide</span>
-            </div>
-            <div className="row g-3">
+            <p className="body-xs text-muted mb-0">
+              Taux estimé sur un volume standard de cours de 96 heures.
+            </p>
+          </div>
+
+          <div style={cardStyle} className="p-4 bg-white">
+            <h5 className="section-title mb-3 d-flex align-items-center gap-2">
+              <i className="bi bi-sliders text-primary"></i>
+              Indicateurs Clés
+            </h5>
+            <div className="d-flex flex-column gap-3">
               {[
-                { val: filieres.length,    lbl: "Filières" },
-                { val: totalAbsences,      lbl: "Absences" },
-                { val: justifiedCount,     lbl: "Justifiées" },
-                { val: unjustifiedCount,   lbl: "Non Just." },
-              ].map((item, i) => (
-                <div key={i} className="col-6">
-                  <p className="mb-0 fw-bold" style={{ fontSize: "1.5rem" }}>{item.val}</p>
-                  <p className="mb-0" style={{ fontSize: "0.75rem", opacity: 0.6 }}>{item.lbl}</p>
+                { lbl: "Absences Total", val: `${totalCount} sessions`, icon: "bi-calendar-event", bg: "rgba(99,102,241,0.08)", color: "#4f46e5" },
+                { lbl: "Heures Perdues", val: `${hoursCount} heures`, icon: "bi-clock-fill", bg: "rgba(244,63,94,0.08)", color: "#e11d48" },
+                { lbl: "Absences Justifiées", val: `${justCount} validées`, icon: "bi-shield-check", bg: "rgba(16,185,129,0.08)", color: "#059669" },
+                { lbl: "Retards Signalés", val: `${retardCount} retards`, icon: "bi-alarm", bg: "rgba(245,158,11,0.08)", color: "#d97706" },
+              ].map((item, idx) => (
+                <div key={idx} className="d-flex align-items-center justify-content-between p-2 rounded-3" style={{ background: item.bg }}>
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="rounded-2 d-flex align-items-center justify-content-center" style={{ width: 28, height: 28, background: "#fff", border: "1px solid rgba(0,0,0,0.05)" }}>
+                      <i className={`bi ${item.icon}`} style={{ color: item.color, fontSize: "0.85rem" }}></i>
+                    </span>
+                    <span className="body-sm fw-medium text-dark-navy">{item.lbl}</span>
+                  </div>
+                  <span className="fw-bold text-dark" style={{ fontSize: "0.825rem" }}>{item.val}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
+
+        {/* Timeline tracking list */}
+        <div className="col-lg-8">
+          <div style={cardStyle} className="p-4 bg-white h-100">
+            <h5 className="section-title mb-4 d-flex align-items-center gap-2">
+              <i className="bi bi-clock-history text-primary"></i>
+              Chronologie des Absences
+            </h5>
+
+            {individualTimeline.length === 0 ? (
+              <div className="text-center py-5 bg-light rounded-3 text-muted body-sm">
+                <i className="bi bi-calendar-check d-block mb-2 opacity-50" style={{ fontSize: "2rem" }}></i>
+                Aucune absence signalée pour ce stagiaire dans la période spécifiée.
+              </div>
+            ) : (
+              <div className="timeline-container animate-fade-in">
+                {individualTimeline.map((abs, idx) => (
+                  <div key={idx} className="timeline-item">
+                    <div className={`timeline-badge ${abs.badgeClass}`}></div>
+                    <div className="timeline-content">
+                      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                        <span className="fw-bold text-dark-navy" style={{ fontSize: "0.875rem" }}>
+                          {new Date(abs.date + "T00:00:00").toLocaleDateString("fr-FR", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span className={`badge rounded-pill px-3 py-1 ${abs.statusBadgeClass}`} style={{ fontSize: "0.7rem", fontWeight: 700 }}>
+                          {abs.statusLabel}
+                        </span>
+                      </div>
+                      <p className="body-sm text-secondary mb-1">
+                        <strong>Séance :</strong> {abs.sessionSlot} ({abs.sessionTime}) &bull; <strong>Heures :</strong> {getHours(abs)}h
+                      </p>
+                      {abs.justification && (
+                        <p className="body-sm text-success mb-1">
+                          <i className="bi bi-file-earmark-check-fill me-1"></i>
+                          <strong>Justification :</strong> {abs.justification}
+                        </p>
+                      )}
+                      {abs.motif && (
+                        <p className="body-sm text-muted mb-0" style={{ fontSize: "0.78rem" }}>
+                          <i className="bi bi-chat-left-dots-fill me-1 opacity-50"></i>
+                          <strong>Motif :</strong> "{abs.motif}"
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      {/* ── KPI Cards ── */}
+      <div className="row g-4 mb-4 page-main-header">
+        {kpiCards.map((c, i) => {
+          const Icon = c.icon;
+          return (
+            <div key={i} className="col-12 col-sm-6 col-lg-4">
+              <div style={{ ...cardStyle, transition: "box-shadow 0.2s, transform 0.2s" }}
+                className="p-4 hover-lift bg-white">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="d-flex align-items-center justify-content-center rounded-3"
+                    style={{ width: 44, height: 44, background: c.bg }}>
+                    <Icon size={20} color={c.color} />
+                  </div>
+                  <span className="badge rounded-pill d-flex align-items-center gap-1"
+                    style={{
+                      background: c.trendUp ? "rgba(16,185,129,0.1)" : "rgba(244,63,94,0.1)",
+                      color:      c.trendUp ? "#059669" : "#e11d48",
+                      fontSize:   "0.75rem",
+                      fontWeight: 600,
+                    }}>
+                    <i className={`bi bi-arrow-${c.trendUp ? "up" : "down"}-right`}></i>
+                  </span>
+                </div>
+                <p className="mb-1 animate-fade-in" style={{ fontSize: "2rem", fontWeight: 700, letterSpacing: "-0.03em", lineHeight: 1, color: "var(--color-text)" }}>
+                  {c.value}
+                </p>
+                <p className="body-sm mb-0">{c.label}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Choice Conditional Viewport ── */}
+      <div className="animate-fade-in">
+        {activeChoiceView === "ensemble" && renderGlobalOverview()}
+        {activeChoiceView === "filiere" && renderClassAnalytics()}
+        {activeChoiceView === "stagiaire" && renderStagiaireProfile()}
       </div>
     </div>
   );
