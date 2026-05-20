@@ -388,6 +388,10 @@ body {
 .classe-dropdown { margin-top: 2px; }
 .btn-white { background-color: #fff; border-color: #dee2e6; }
 
+.saisie-slot-time { font-size: 0.65rem; }
+.saisie-slot-time-full { display: block; }
+.saisie-slot-time-compact { display: none; }
+
 /* ─── Animations ────────────────────────────────────────────────────────────── */
 .anim-fade-in { animation: fadeIn 0.3s ease-in-out; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
@@ -581,8 +585,23 @@ body {
     padding-right: 0.85rem !important;
   }
 
-  /* ── SaisiePage: hide session time labels, keep S1–S4 short labels ── */
-  .saisie-slot-time { display: none !important; }
+  /* ── SaisiePage: responsive stacked slot times ── */
+  .saisie-slot-time-full { display: none !important; }
+  .saisie-slot-time-compact {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.55rem !important;
+    line-height: 1.1;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .saisie-slot-time-arrow {
+    font-size: 0.5rem;
+    color: var(--color-accent);
+    margin: 1px 0;
+    line-height: 1;
+  }
 
   /* ── SaisiePage card header: tighter padding ── */
   .saisie-grid-header {

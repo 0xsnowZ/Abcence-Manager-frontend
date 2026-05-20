@@ -443,8 +443,13 @@ function SaisiePage() {
                     {slots.map((s) => (
                       <div key={s.id} className="text-center">
                         <div className="fw-bold text-dark-navy small">{s.short}</div>
-                        <div className="text-muted saisie-slot-time" style={{ fontSize: "0.65rem" }}>
-                          {s.label}
+                        <div className="text-muted saisie-slot-time">
+                          <span className="saisie-slot-time-full">{s.label}</span>
+                          <span className="saisie-slot-time-compact">
+                            <span>{s.label.split(/–|-/)[0]}</span>
+                            <span className="saisie-slot-time-arrow">↓</span>
+                            <span>{s.label.split(/–|-/)[1]}</span>
+                          </span>
                         </div>
                       </div>
                     ))}
