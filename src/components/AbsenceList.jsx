@@ -306,7 +306,7 @@ function AbsenceList({
                           {formatDate(absence.date)}
                         </span>
                         {absence.time_block_id && (
-                          <span className="body-xs text-muted d-block ms-4">
+                          <span className="body-xs text-muted d-block ms-4 seance-mobile-small">
                             {getSeanceLabel(absence.time_block_id)}
                           </span>
                         )}

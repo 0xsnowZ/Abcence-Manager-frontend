@@ -750,3 +750,10 @@ body {
   }
 }
 
+@media (max-width: 576px) {
+  .seance-mobile-small {
+    font-size: 0.68rem !important;
+    margin-left: 0.5rem !important;
+  }
+}
+
