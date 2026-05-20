@@ -517,6 +517,8 @@ body {
 .bg-soft-success    { background-color: var(--color-success-light) !important; }
 .bg-soft-danger     { background-color: var(--color-danger-light) !important; }
 .bg-soft-warning    { background-color: var(--color-warning-light) !important; }
+.bg-soft-info       { background-color: var(--color-info-light) !important; }
+
 
 /* ─── Mobile typography & layout fixes (≤575px) ─────────────────────────── */
 @media (max-width: 575px) {

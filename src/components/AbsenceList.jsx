@@ -128,10 +128,10 @@ function AbsenceList({
 
   const getStatusColor = (status) => {
     const colors = {
-      non_justifie: { badge: "bg-danger", icon: "bi-x-circle-fill", label: "Non justifiée" },
-      justifie: { badge: "bg-success", icon: "bi-check-circle-fill", label: "Justifiée" },
-      retard: { badge: "bg-warning", icon: "bi-exclamation-circle-fill", label: "Retard" },
-      absence_excusee: { badge: "bg-info", icon: "bi-info-circle-fill", label: "Absence excusée" },
+      non_justifie: { badge: "bg-soft-danger text-danger border border-danger", icon: "bi-x-circle-fill", label: "Non justifiée" },
+      justifie: { badge: "bg-soft-success text-success border border-success", icon: "bi-check-circle-fill", label: "Justifiée" },
+      retard: { badge: "bg-soft-warning text-warning border border-warning", icon: "bi-exclamation-circle-fill", label: "Retard" },
+      absence_excusee: { badge: "bg-soft-info text-info border border-info", icon: "bi-info-circle-fill", label: "Absence excusée" },
     };
     return colors[status] || colors.non_justifie;
   };
@@ -272,7 +272,7 @@ function AbsenceList({
                           <div className="avatar-circle avatar-md avatar-accent me-3">
                             <i className="bi bi-person-fill" style={{ fontSize: "0.85rem" }}></i>
                           </div>
-                          <span className="fw-bold text-dark">
+                          <span className="fw-bold text-dark" style={{ fontSize: "0.825rem" }}>
                             {getStagiaireName(absence)}
                           </span>
                         </div>
@@ -299,8 +299,8 @@ function AbsenceList({
                           const statusConfig = getStatusColor(absence.status || "non_justifie");
                           return (
                             <button
-                              className={`badge ${statusConfig.badge} py-2 px-3 border-0`}
-                              style={{ cursor: "pointer", fontSize: "0.85rem" }}
+                              className={`badge ${statusConfig.badge} py-1.5 px-3 rounded-pill`}
+                              style={{ cursor: "pointer", fontSize: "0.78rem", outline: "none", boxShadow: "none" }}
                               onClick={() => setDetailAbsence(absence)}
                               title="Voir les détails"
                             >
