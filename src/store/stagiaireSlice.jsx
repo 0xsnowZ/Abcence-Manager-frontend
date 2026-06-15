@@ -64,12 +64,12 @@ export const importStagiairesFromExcel = createAsyncThunk(
   }
 );
 
-/** POST /api/stagiaires/import-replace — deletes all stagiaires + attendances + inscriptions first */
+/** POST /api/import-stagiaires/replace — deletes all stagiaires + attendances + inscriptions first */
 export const importReplaceStagiaires = createAsyncThunk(
   "stagiaires/importReplace",
   async (stagiaires, { rejectWithValue }) => {
     try {
-      const response = await api.post("/stagiaires/import-replace", { stagiaires });
+      const response = await api.post("/import-stagiaires/replace", { stagiaires });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de remplacement");
