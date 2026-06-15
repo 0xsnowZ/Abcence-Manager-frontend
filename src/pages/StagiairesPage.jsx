@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import StagiaireForm from "../components/StagiaireForm.jsx";
 import StagiaireList from "../components/StagiaireList.jsx";
 import StagiaireDetail from "../components/StagiaireDetail.jsx";
+import ExcelImportModal from "../components/ExcelImportModal.jsx";
 import { fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import {
   fetchSecteurs,
@@ -54,6 +55,7 @@ function StagiairesPage() {
   const [selectedStagiaire, setSelectedStagiaire] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingStagiaire, setEditingStagiaire] = useState(null);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     dispatch(fetchStagiaires());
@@ -149,14 +151,17 @@ function StagiairesPage() {
           </nav>
         </div>
 
-        {user?.role === "admin" && !showForm && selectedProgramme && (
-          <button
-            className="btn-navy d-flex align-items-center gap-2"
-            onClick={handleAddNew}
-          >
-            <i className="bi bi-plus-lg"></i>
-            Nouveau Stagiaire
-          </button>
+        {user?.role === "admin" && !showForm && (
+          <div className="d-flex gap-2">
+            {selectedProgramme && (
+              <button className="btn-navy d-flex align-items-center gap-2" onClick={handleAddNew}>
+                <i className="bi bi-plus-lg"></i>Nouveau Stagiaire
+              </button>
+            )}
+            <button className="btn-navy-outline d-flex align-items-center gap-2" onClick={() => setShowImport(true)}>
+              <i className="bi bi-file-earmark-spreadsheet"></i>Importer Excel
+            </button>
+          </div>
         )}
       </div>
 
@@ -228,6 +233,8 @@ function StagiairesPage() {
             </div>
           )}
         </div>
+      ) : showImport ? (
+        <ExcelImportModal onClose={() => setShowImport(false)} />
       ) : (
         /* ── Level 1: secteurs ── */
         <div className="row g-4">

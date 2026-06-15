@@ -51,6 +51,19 @@ export const updateStagiaire = createAsyncThunk(
   }
 );
 
+/** POST /api/stagiaires/upsert-from-excel */
+export const importStagiairesFromExcel = createAsyncThunk(
+  "stagiaires/importFromExcel",
+  async (stagiaires, { rejectWithValue }) => {
+    try {
+      const response = await api.post("/stagiaires/upsert-from-excel", { stagiaires });
+      return response.data.data;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || "Erreur d'import");
+    }
+  }
+);
+
 /** DELETE /api/stagiaires/:id */
 export const deleteStagiaire = createAsyncThunk(
   "stagiaires/delete",
