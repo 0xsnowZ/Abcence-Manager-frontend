@@ -18,6 +18,38 @@ const COLUMN_MAP = {
   datedossiercomplet: "date_dossier_complet",
 };
 
+const DATE_FIELDS = new Set(["date_naissance", "date_inscription", "date_dossier_complet"]);
+
+function normalizeDate(val) {
+  if (!val || val === "") return "";
+  // Already a Date object
+  if (val instanceof Date && !isNaN(val)) {
+    return val.toISOString().slice(0, 10);
+  }
+  const str = String(val).trim();
+  // Excel serial number (e.g. 45000)
+  if (/^\d+(\.\d+)?$/.test(str) && parseInt(str) > 40000) {
+    const d = XLSX.SSF.parse_date_code(parseFloat(str));
+    if (d) {
+      const m = String(d.m).padStart(2, "0");
+      const day = String(d.d).padStart(2, "0");
+      return `${d.y}-${m}-${day}`;
+    }
+  }
+  // DD/MM/YYYY or D/M/YYYY
+  const dmy = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    const [, day, month, year] = dmy;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+  // YYYY-MM-DD already
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  // Try native Date parsing as fallback
+  const d = new Date(str);
+  if (!isNaN(d)) return d.toISOString().slice(0, 10);
+  return str;
+}
+
 function ExcelImportModal({ onClose }) {
   const dispatch = useDispatch();
   const showToast = useToast();
@@ -44,7 +76,9 @@ function ExcelImportModal({ onClose }) {
         Object.entries(r).forEach(([key, val]) => {
           const k = key.toLowerCase().replace(/[\s\-_]/g, "");
           const mappedKey = COLUMN_MAP[k];
-          if (mappedKey) entry[mappedKey] = String(val).trim();
+          if (mappedKey) {
+            entry[mappedKey] = DATE_FIELDS.has(mappedKey) ? normalizeDate(val) : String(val).trim();
+          }
         });
         return entry;
       }).filter((r) => r.matricule && r.nom && r.prenom);
