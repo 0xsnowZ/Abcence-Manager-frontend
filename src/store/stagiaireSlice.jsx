@@ -51,28 +51,14 @@ export const updateStagiaire = createAsyncThunk(
   }
 );
 
-/** POST /api/stagiaires/upsert-from-excel — upsert without deleting */
 export const importStagiairesFromExcel = createAsyncThunk(
   "stagiaires/importFromExcel",
-  async (stagiaires, { rejectWithValue }) => {
+  async ({ stagiaires, replace }, { rejectWithValue }) => {
     try {
-      const response = await api.post("/stagiaires/upsert-from-excel", { stagiaires });
+      const response = await api.post("/stagiaires/upsert-from-excel", { stagiaires, replace });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur d'import");
-    }
-  }
-);
-
-/** POST /api/import-stagiaires/replace — deletes all stagiaires + attendances + inscriptions first */
-export const importReplaceStagiaires = createAsyncThunk(
-  "stagiaires/importReplace",
-  async (stagiaires, { rejectWithValue }) => {
-    try {
-      const response = await api.post("/import-stagiaires/replace", { stagiaires });
-      return response.data.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Erreur de remplacement");
     }
   }
 );
