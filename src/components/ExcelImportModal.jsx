@@ -20,6 +20,25 @@ const COLUMN_MAP = {
 
 const DATE_FIELDS = new Set(["date_naissance", "date_inscription", "date_dossier_complet"]);
 
+const FIELD_LABELS = {
+  matricule: "Matricule",
+  nom: "Nom",
+  prenom: "Prénom",
+  sexe: "Sexe",
+  date_naissance: "Date Naissance",
+  lieu_naissance: "Lieu Naissance",
+  cin: "CIN",
+  telephone: "Téléphone",
+  code_diplome: "Code Diplome",
+  date_inscription: "Date Inscription",
+  date_dossier_complet: "Date Dossier Complet",
+};
+
+const FIELD_ORDER = [
+  "matricule", "nom", "prenom", "sexe", "date_naissance", "lieu_naissance",
+  "cin", "telephone", "code_diplome", "date_inscription", "date_dossier_complet",
+];
+
 function normalizeDate(val) {
   if (val == null || val === "") return null;
   // Already a Date object
@@ -134,29 +153,27 @@ function ExcelImportModal({ onClose }) {
                     <i className="bi bi-info-circle me-1"></i>
                     {rows.length} stagiaire(s) détectés.
                   </div>
-                  <div style={{ maxHeight: 250, overflow: "auto" }} className="border rounded small">
-                    <table className="table table-sm mb-0">
+                  <div style={{ maxHeight: 300, overflow: "auto" }} className="border rounded small">
+                    <table className="table table-sm mb-0" style={{ fontSize: "0.72rem", whiteSpace: "nowrap" }}>
                       <thead>
                         <tr>
-                          <th>#</th>
-                          <th>Matricule</th>
-                          <th>Nom</th>
-                          <th>Prénom</th>
-                          <th>CodeDiplome</th>
+                          <th className="sticky-top bg-white">#</th>
+                          {FIELD_ORDER.filter((f) => rows.some((r) => r[f] != null && r[f] !== "")).map((f) => (
+                            <th key={f} className="sticky-top bg-white">{FIELD_LABELS[f] || f}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
                         {rows.slice(0, 100).map((r, i) => (
                           <tr key={i}>
                             <td className="text-muted">{i + 1}</td>
-                            <td>{r.matricule}</td>
-                            <td>{r.nom}</td>
-                            <td>{r.prenom}</td>
-                            <td>{r.code_diplome || "—"}</td>
+                            {FIELD_ORDER.filter((f) => rows.some((r) => r[f] != null && r[f] !== "")).map((f) => (
+                              <td key={f}>{r[f] != null && r[f] !== "" ? r[f] : "—"}</td>
+                            ))}
                           </tr>
                         ))}
                         {rows.length > 100 && (
-                          <tr><td colSpan={5} className="text-muted text-center">... et {rows.length - 100} autres</td></tr>
+                          <tr><td colSpan={99} className="text-muted text-center">... et {rows.length - 100} autres</td></tr>
                         )}
                       </tbody>
                     </table>
