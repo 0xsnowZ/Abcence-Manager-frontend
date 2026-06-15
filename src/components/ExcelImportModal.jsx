@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import * as XLSX from "xlsx";
-import { importStagiairesFromExcel, fetchStagiaires } from "../store/stagiaireSlice.jsx";
+import { importStagiairesFromExcel, importReplaceStagiaires, fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 
 const COLUMN_MAP = {
@@ -77,6 +77,8 @@ function ExcelImportModal({ onClose }) {
   const [rows, setRows] = useState([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null);
+  const [replaceAll, setReplaceAll] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -110,17 +112,23 @@ function ExcelImportModal({ onClose }) {
 
   const handleImport = async () => {
     if (rows.length === 0) return;
+    if (replaceAll && !confirmReplace) {
+      setConfirmReplace(true);
+      return;
+    }
     setImporting(true);
-    const res = await dispatch(importStagiairesFromExcel(rows));
+    const action = replaceAll ? importReplaceStagiaires : importStagiairesFromExcel;
+    const res = await dispatch(action(rows));
     setImporting(false);
+    setConfirmReplace(false);
     if (res.error) {
       showToast(res.payload || "Erreur lors de l'import.", "error");
     } else {
       setResult(res.payload);
-      showToast(
-        `Import terminé : ${res.payload.created} créés, ${res.payload.updated} mis à jour, ${res.payload.errors} erreurs.`,
-        "success"
-      );
+      const msg = replaceAll
+        ? `Remplacement terminé : ${res.payload.imported} importés, ${res.payload.errors} erreurs.`
+        : `Import terminé : ${res.payload.created} créés, ${res.payload.updated} mis à jour, ${res.payload.errors} erreurs.`;
+      showToast(msg, "success");
       dispatch(fetchStagiaires());
     }
   };
@@ -181,10 +189,38 @@ function ExcelImportModal({ onClose }) {
                 </div>
               )}
 
+              {rows.length > 0 && (
+                <div className="form-check mb-3">
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    id="replaceAll"
+                    checked={replaceAll}
+                    onChange={(e) => { setReplaceAll(e.target.checked); setConfirmReplace(false); }}
+                  />
+                  <label className="form-check-label fw-bold text-danger" htmlFor="replaceAll" style={{ fontSize: "0.85rem" }}>
+                    <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                    Remplacer toutes les données existantes
+                  </label>
+                  <small className="d-block text-muted mt-1" style={{ fontSize: "0.75rem" }}>
+                    Tous les stagiaires, absences et inscriptions actuels seront supprimés et remplacés par les données du fichier.
+                  </small>
+                </div>
+              )}
+
+              {confirmReplace && (
+                <div className="alert alert-danger py-2 mb-3" style={{ fontSize: "0.85rem" }}>
+                  <i className="bi bi-exclamation-triangle-fill me-1"></i>
+                  <strong>Confirmation :</strong> Cette action est irréversible. Toutes les données existantes seront effacées. Cliquez à nouveau sur "Importer" pour confirmer.
+                </div>
+              )}
+
               {result && (
                 <div className="alert alert-success py-2" style={{ fontSize: "0.85rem" }}>
                   <i className="bi bi-check-circle-fill me-1"></i>
-                  {result.created} créés, {result.updated} mis à jour, {result.errors} erreurs.
+                  {result.created
+                    ? `${result.created} créés, ${result.updated} mis à jour, ${result.errors} erreurs.`
+                    : `${result.imported} importés, ${result.errors} erreurs.`}
                 </div>
               )}
             </div>
@@ -193,12 +229,14 @@ function ExcelImportModal({ onClose }) {
                 Fermer
               </button>
               <button
-                className="btn btn-dark-navy btn-sm px-4 rounded-pill"
+                className={`btn btn-sm px-4 rounded-pill ${replaceAll ? "btn-danger" : "btn-dark-navy"}`}
                 onClick={handleImport}
                 disabled={rows.length === 0 || importing}
               >
                 {importing ? (
                   <><span className="spinner-border spinner-border-sm me-2"></span>Importation...</>
+                ) : replaceAll ? (
+                  <><i className="bi bi-trash3-fill me-2"></i>{confirmReplace ? "Confirmer le remplacement" : "Remplacer tout"}</>
                 ) : (
                   <><i className="bi bi-upload me-2"></i>Importer{rows.length > 0 ? ` (${rows.length})` : ""}</>
                 )}
