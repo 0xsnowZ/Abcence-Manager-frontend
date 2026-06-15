@@ -21,12 +21,13 @@ const COLUMN_MAP = {
 const DATE_FIELDS = new Set(["date_naissance", "date_inscription", "date_dossier_complet"]);
 
 function normalizeDate(val) {
-  if (!val || val === "") return "";
+  if (val == null || val === "") return null;
   // Already a Date object
   if (val instanceof Date && !isNaN(val)) {
     return val.toISOString().slice(0, 10);
   }
   const str = String(val).trim();
+  if (!str) return null;
   // Excel serial number (e.g. 45000)
   if (/^\d+(\.\d+)?$/.test(str) && parseInt(str) > 40000) {
     const d = XLSX.SSF.parse_date_code(parseFloat(str));
@@ -47,7 +48,7 @@ function normalizeDate(val) {
   // Try native Date parsing as fallback
   const d = new Date(str);
   if (!isNaN(d)) return d.toISOString().slice(0, 10);
-  return str;
+  return null;
 }
 
 function ExcelImportModal({ onClose }) {
