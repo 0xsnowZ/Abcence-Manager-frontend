@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import * as XLSX from "xlsx";
-import { importStagiairesFromExcel, fetchStagiaires } from "../store/stagiaireSlice.jsx";
+import { importStagiairesFromExcel, importReplaceStagiaires, fetchStagiaires } from "../store/stagiaireSlice.jsx";
 import { useToast } from "./ToastProvider.jsx";
 
 const COLUMN_MAP = {
@@ -117,7 +117,8 @@ function ExcelImportModal({ onClose }) {
       return;
     }
     setImporting(true);
-    const res = await dispatch(importStagiairesFromExcel({ stagiaires: rows, replace: replaceAll }));
+    const action = replaceAll ? importReplaceStagiaires : importStagiairesFromExcel;
+    const res = await dispatch(action(rows));
     setImporting(false);
     setConfirmReplace(false);
     if (res.error) {
