@@ -53,24 +53,13 @@ export const updateStagiaire = createAsyncThunk(
 
 export const importStagiairesFromExcel = createAsyncThunk(
   "stagiaires/importFromExcel",
-  async (stagiaires, { rejectWithValue }) => {
+  async ({ stagiaires, replace }, { rejectWithValue }) => {
     try {
-      const response = await api.post("/stagiaires/upsert-from-excel", { stagiaires });
+      const url = replace ? "/stagiaires/upsert-from-excel?replace=1" : "/stagiaires/upsert-from-excel";
+      const response = await api.post(url, { stagiaires });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur d'import");
-    }
-  }
-);
-
-export const importReplaceStagiaires = createAsyncThunk(
-  "stagiaires/importReplace",
-  async (stagiaires, { rejectWithValue }) => {
-    try {
-      const response = await api.post("/stagiaires/import-replace", { stagiaires });
-      return response.data.data;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.message || "Erreur de remplacement");
     }
   }
 );
