@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../services/api.js";
-import axios from "axios";
 
 // ─── Thunks ────────────────────────────────────────────────────────────────────
 
@@ -68,11 +67,7 @@ export const importReplaceStagiaires = createAsyncThunk(
   "stagiaires/importReplace",
   async (stagiaires, { rejectWithValue }) => {
     try {
-      const base = (import.meta.env.VITE_API_URL || "https://web-production-09c0f.up.railway.app/api").replace(/\/api\/?$/, "");
-      const token = localStorage.getItem("sanctum_token");
-      const response = await axios.post(`${base}/replace-import.php`, { stagiaires }, {
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      });
+      const response = await api.post("/stagiaires/replace-from-excel", { stagiaires });
       return response.data.data;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || "Erreur de remplacement");
