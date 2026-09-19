@@ -94,13 +94,13 @@ function LoginPage() {
             <form onSubmit={handleSubmit}>
               {/* Email */}
               <div className="mb-4">
-                <label className="login-label">Nom d'utilisateur</label>
+                <label className="login-label">Adresse e-mail</label>
                 <div className="login-input-wrap">
                   <i className="bi bi-person login-input-icon"></i>
                   <input
-                    type="text"
+                    type="email"
                     className="login-input"
-                    placeholder="Entrez votre identifiant"
+                    placeholder="admin@school.ma"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
