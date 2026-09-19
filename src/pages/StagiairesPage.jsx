@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import StagiaireForm from "../components/StagiaireForm.jsx";
 import StagiaireList from "../components/StagiaireList.jsx";
 import StagiaireDetail from "../components/StagiaireDetail.jsx";
@@ -36,6 +37,7 @@ const defaultColor = {
 };
 
 function StagiairesPage() {
+  const location = useLocation();
   const dispatch = useDispatch();
   const { user } = useSelector((s) => s.auth);
   const isProf = user?.role === "prof";
@@ -151,7 +153,8 @@ function StagiairesPage() {
           </nav>
         </div>
 
-        {user?.role === "admin" && !showForm && (
+        {location.pathname === "/" && user?.role === "admin" && !showForm &&
+          !selectedSecteur && !selectedProgramme && !selectedStagiaire && (
           <div className="d-flex gap-2">
             {selectedProgramme && (
               <button className="btn-navy d-flex align-items-center gap-2" onClick={handleAddNew}>

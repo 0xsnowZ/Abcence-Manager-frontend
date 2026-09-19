@@ -105,6 +105,13 @@ export const updateAttendanceStatus = createAsyncThunk(
 //                       updatedByUser: { id, name, email } }
 // Frontend absence: { id, idstag, date, status, createdByUser, updatedByUser,
 //                     created_at, updated_at, justifie, justification, heures, typeCode }
+const statusFromTypeCode = (code) => ({
+  ABSENT: "non_justifie",
+  EXCUSED: "justifie",
+  LATE: "retard",
+  PERMIT: "absence_excusee",
+}[code] || "non_justifie");
+
 export const normalizeAttendance = (a) => ({
   id: a.id,
   idstag: a.stagiaire_id,
@@ -114,8 +121,8 @@ export const normalizeAttendance = (a) => ({
   time_block_id: a.session?.time_block_id || a.time_block_id || null,
   timeBlock: a.session?.time_block ?? a.session?.timeBlock ?? a.timeBlock ?? null,
   session: a.session || null,
-  status: a.status || "non_justifie",
-  justifie: a.status === "justifie" || !!a.justification,
+  status: a.status || statusFromTypeCode(a.typeAbsence?.code),
+  justifie: a.status === "justifie" || statusFromTypeCode(a.typeAbsence?.code) === "justifie" || !!a.justification,
   justification: a.justification || "",
   justified_at: a.justified_at,
   heures: 2.5, // each attendance = 1 time block = 2.5h
@@ -178,7 +185,7 @@ const absenceSlice = createSlice({
             const normalized = normalizeAttendance(newItem);
             const idx = state.items.findIndex((a) => a.id === normalized.id);
             if (idx !== -1) {
-              state.items[idx] = normalized;
+              state.items[idx] = { ...state.items[idx], ...normalized };
             } else {
               state.items.push(normalized);
             }
@@ -194,7 +201,10 @@ const absenceSlice = createSlice({
     builder
       .addCase(createAttendance.pending, (state) => { state.error = null; })
       .addCase(createAttendance.fulfilled, (state, action) => {
-        state.items.push(normalizeAttendance(action.payload));
+        const normalized = normalizeAttendance(action.payload);
+        const idx = state.items.findIndex((a) => a.id === normalized.id);
+        if (idx !== -1) state.items[idx] = { ...state.items[idx], ...normalized };
+        else state.items.push(normalized);
       })
       .addCase(createAttendance.rejected, (state, action) => {
         state.error = action.payload;
@@ -205,7 +215,9 @@ const absenceSlice = createSlice({
       .addCase(updateAttendance.pending, (state) => { state.error = null; })
       .addCase(updateAttendance.fulfilled, (state, action) => {
         const idx = state.items.findIndex((a) => a.id === action.payload.id);
-        if (idx !== -1) state.items[idx] = normalizeAttendance(action.payload);
+        if (idx !== -1) {
+          state.items[idx] = { ...state.items[idx], ...normalizeAttendance(action.payload) };
+        }
       })
       .addCase(updateAttendance.rejected, (state, action) => {
         state.error = action.payload;
@@ -227,7 +239,7 @@ const absenceSlice = createSlice({
       .addCase(updateAttendanceStatus.fulfilled, (state, action) => {
         const idx = state.items.findIndex((a) => a.id === action.payload.id);
         if (idx !== -1) {
-          state.items[idx] = normalizeAttendance(action.payload);
+          state.items[idx] = { ...state.items[idx], ...normalizeAttendance(action.payload) };
         }
       })
       .addCase(updateAttendanceStatus.rejected, (state, action) => {

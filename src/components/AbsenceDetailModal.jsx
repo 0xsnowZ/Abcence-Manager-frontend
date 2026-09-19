@@ -20,6 +20,12 @@ function AbsenceDetailModal({ absence, onClose }) {
         }
     }, [dispatch, timeBlocks]);
 
+    useEffect(() => {
+        setSelectedStatus(absence?.status || "non_justifie");
+        setJustification(absence?.justification || "");
+        setEditing(false);
+    }, [absence?.id, absence?.status, absence?.justification]);
+
     const isAdmin = user?.role === "admin";
 
     const statusColors = {
