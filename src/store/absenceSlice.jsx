@@ -112,7 +112,11 @@ const statusFromTypeCode = (code) => ({
   PERMIT: "absence_excusee",
 }[code] || "non_justifie");
 
-export const normalizeAttendance = (a) => ({
+export const normalizeAttendance = (a) => {
+  // Laravel serializes the typeAbsence relation as type_absence by default.
+  const typeAbsence = a.typeAbsence ?? a.type_absence;
+
+  return {
   id: a.id,
   idstag: a.stagiaire_id,
   stagiaireNom: a.stagiaire ? `${a.stagiaire.nom} ${a.stagiaire.prenom}` : "",
@@ -121,12 +125,12 @@ export const normalizeAttendance = (a) => ({
   time_block_id: a.session?.time_block_id || a.time_block_id || null,
   timeBlock: a.session?.time_block ?? a.session?.timeBlock ?? a.timeBlock ?? null,
   session: a.session || null,
-  status: a.status || statusFromTypeCode(a.typeAbsence?.code),
-  justifie: a.status === "justifie" || statusFromTypeCode(a.typeAbsence?.code) === "justifie" || !!a.justification,
+  status: a.status || statusFromTypeCode(typeAbsence?.code),
+  justifie: a.status === "justifie" || statusFromTypeCode(typeAbsence?.code) === "justifie" || !!a.justification,
   justification: a.justification || "",
   justified_at: a.justified_at,
   heures: 2.5, // each attendance = 1 time block = 2.5h
-  typeCode: a.typeAbsence?.code || "ABSENT",
+  typeCode: typeAbsence?.code || "ABSENT",
   type_absence_id: a.type_absence_id,
   recorded_by: a.recorded_by,
   recorded_at: a.recorded_at,
@@ -136,7 +140,8 @@ export const normalizeAttendance = (a) => ({
   updated_by_user_id: a.updated_by_user_id,
   createdByUser: a.createdByUser ?? a.created_by_user,
   updatedByUser: a.updatedByUser ?? a.updated_by_user,
-});
+  };
+};
 
 // ─── Slice ─────────────────────────────────────────────────────────────────────
 const absenceSlice = createSlice({

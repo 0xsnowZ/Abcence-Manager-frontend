@@ -93,7 +93,7 @@ npm install
 
 # 3. Configure environment
 cp .env.example .env
-# Set VITE_API_URL=http://localhost:8000/api  (or your Railway URL)
+# The frontend uses the local backend at http://localhost:8000/api
 
 # 4. Start development server
 npm run dev
@@ -169,17 +169,7 @@ Slice
 
 ---
 
-## ☁️ Deployment
-
-The frontend deploys automatically to **Vercel** on every push to `main`.
-
-### Environment Variables (Vercel dashboard)
-
-```env
-VITE_API_URL=https://web-production-09c0f.up.railway.app/api
-```
-
-### Build Output
+## Build Output
 
 | Chunk | Size (gzip) |
 |---|---|

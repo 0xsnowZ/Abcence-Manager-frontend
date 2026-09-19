@@ -53,6 +53,7 @@ function AbsenceForm({ absence, onCancel, onSave }) {
         await dispatch(
           updateAttendance({
             id: absence.id,
+            status: formData.status,
             justification: formData.justifie
               ? formData.justification || "Justifié"
               : null,
